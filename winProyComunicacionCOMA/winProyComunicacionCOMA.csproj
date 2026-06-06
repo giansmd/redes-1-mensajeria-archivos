@@ -7,7 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>winProyComunicacion</RootNamespace>
-    <AssemblyName>winProyComunicacionCOM2</AssemblyName>
+    <AssemblyName>winProyComunicacionCOMA</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +21,6 @@
     <Compile Include="..\Shared\Form1.Designer.cs" Link="Form1.Designer.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="..\Shared\Program.cs" Link="Program.cs" />
     <Compile Include="..\Shared\classComunicacion.cs" Link="classComunicacion.cs" />
   </ItemGroup>
 

@@ -5,10 +5,14 @@ namespace winProyComunicacion
         private const string DefaultRemoteUser = "Remoto";
         private static readonly int[] VelocidadesSoportadas = [900, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800];
 
+        public static string? PuertoPreferido { get; set; }
+
         ClassComunicacion Enlace;
 
         private delegate void AccedeControl(string mens);
         AccedeControl MuestraMensajeRCH;
+
+        private bool PuertoSeleccionadoAutomatico = false;
 
         public Form1()
         {
@@ -20,8 +24,10 @@ namespace winProyComunicacion
         private void Form1_Load(object sender, EventArgs e)
         {
             Enlace.LlegoMensaje += Enlace_llegoMensaje;
-            CargarPuertos();
             CargarVelocidades();
+            CargarPuertos();
+            SeleccionarPuertoPreferido();
+            this.Text = string.IsNullOrEmpty(PuertoPreferido) ? "SRChat" : $"SRChat - {PuertoPreferido}";
             ActualizarConfiguracionPuerto();
         }
 
@@ -93,11 +99,71 @@ namespace winProyComunicacion
             cbCOM.Items.Clear();
             var puertos = System.IO.Ports.SerialPort.GetPortNames();
             Array.Sort(puertos, StringComparer.OrdinalIgnoreCase);
-            cbCOM.Items.AddRange(puertos);
-            if (cbCOM.Items.Count > 0)
+
+            foreach (var puerto in puertos)
             {
-                var indiceCom1 = cbCOM.Items.IndexOf("COM2");
-                cbCOM.SelectedIndex = indiceCom1 >= 0 ? indiceCom1 : 0;
+                bool libre = PuertoEstaLibre(puerto);
+                string texto = libre ? puerto : $"{puerto} (en uso)";
+                cbCOM.Items.Add(texto);
+            }
+
+            if (cbCOM.Items.Count == 0)
+            {
+                cbCOM.Items.Add("(sin puertos)");
+                cbCOM.SelectedIndex = 0;
+            }
+        }
+
+        private void SeleccionarPuertoPreferido()
+        {
+            if (PuertoSeleccionadoAutomatico)
+                return;
+
+            string? preferido = PuertoPreferido;
+            int indiceSeleccionado = -1;
+
+            for (int i = 0; i < cbCOM.Items.Count; i++)
+            {
+                string item = cbCOM.Items[i]!.ToString()!;
+                bool esLibre = !item.Contains("(en uso)");
+                string nombrePuerto = item.Replace(" (en uso)", "");
+
+                if (preferido != null && nombrePuerto == preferido && esLibre)
+                {
+                    indiceSeleccionado = i;
+                    break;
+                }
+
+                if (esLibre && indiceSeleccionado == -1)
+                    indiceSeleccionado = i;
+            }
+
+            if (indiceSeleccionado >= 0)
+            {
+                cbCOM.SelectedIndex = indiceSeleccionado;
+                PuertoSeleccionadoAutomatico = true;
+            }
+            else if (cbCOM.Items.Count > 0)
+            {
+                cbCOM.SelectedIndex = 0;
+                PuertoSeleccionadoAutomatico = true;
+            }
+        }
+
+        private bool PuertoEstaLibre(string nombrePuerto)
+        {
+            try
+            {
+                using (var test = new System.IO.Ports.SerialPort(nombrePuerto))
+                {
+                    test.Open();
+                    test.Close();
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -140,18 +206,21 @@ namespace winProyComunicacion
                 return;
             }
 
-            var nombrePuerto = cbCOM.SelectedItem?.ToString();
+            var itemSeleccionado = cbCOM.SelectedItem?.ToString() ?? "";
+            var nombrePuerto = itemSeleccionado.Replace(" (en uso)", "");
+
             if (!int.TryParse(cbVelocidad.SelectedItem?.ToString(), out var velocidad))
             {
                 return;
             }
 
-            Enlace.InicializaPuerto(nombrePuerto!, velocidad);
+            Enlace.InicializaPuerto(nombrePuerto, velocidad);
         }
 
         private bool PuedeConfigurarPuerto()
         {
-            return cbCOM.SelectedItem is not null && cbVelocidad.SelectedItem is not null;
+            var item = cbCOM.SelectedItem?.ToString();
+            return item != null && !item.Contains("(en uso)") && cbVelocidad.SelectedItem is not null;
         }
 
         private bool PuedeEnviar()
