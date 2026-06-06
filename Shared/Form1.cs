@@ -229,5 +229,20 @@ namespace winProyComunicacion
                 && cbCOM.SelectedItem is not null
                 && cbVelocidad.SelectedItem is not null;
         }
+
+        private void btnAbrirArchivo_Click(object sender, EventArgs e)
+        {
+            Enlace.AbrirArchivo(txtArchivoEnvio.Text.Trim());
+        }
+
+        private void btnEnviarArchivo_Click(object sender, EventArgs e)
+        {
+            Enlace.inicioTransmisionArchivo1();
+        }
+
+        private void btnCrearArchivo_Click(object sender, EventArgs e)
+        {
+            Enlace.CrearArchivo(txtArchivoEnvio.Text.Trim(), Convert.ToInt64(txtTamanoArchivo.Text));
+        }
     }
 }
