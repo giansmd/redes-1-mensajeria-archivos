@@ -75,7 +75,7 @@ namespace winProyComunicacion
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ocurrio error al abrir el puerto");
+                MessageBox.Show($"Error al abrir {nombreP}: {ex.Message}");
             }
         }
 

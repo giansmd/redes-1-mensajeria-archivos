@@ -26,7 +26,11 @@ namespace winProyComunicacion
             Enlace.LlegoMensaje += Enlace_llegoMensaje;
             CargarVelocidades();
             CargarPuertos();
+
+            cbCOM.SelectedIndexChanged -= cbCOM_SelectedIndexChanged;
             SeleccionarPuertoPreferido();
+            cbCOM.SelectedIndexChanged += cbCOM_SelectedIndexChanged;
+
             this.Text = string.IsNullOrEmpty(PuertoPreferido) ? "SRChat" : $"SRChat - {PuertoPreferido}";
             ActualizarConfiguracionPuerto();
         }
