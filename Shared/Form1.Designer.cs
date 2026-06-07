@@ -28,16 +28,16 @@
             labelVelocidad = new Label();
             cbVelocidad = new ComboBox();
             gbArchivos = new GroupBox();
-            labelArchivoEnvio = new Label();
-            txtArchivoEnvio = new TextBox();
-            btnAbrirArchivo = new Button();
-            btnEnviarArchivo = new Button();
-            labelRecibirArchivo = new Label();
+            btnSeleccionarArchivos = new Button();
+            lvArchivosSeleccionados = new ListView();
+            btnEnviarArchivos = new Button();
+            lblEstadoRecepcion = new Label();
+            pbRecepcionArchivo = new ProgressBar();
+            lblArchivoRecepcion = new Label();
+            txtArchivoRecepcion = new TextBox();
             txtTamanoArchivo = new TextBox();
             labelBytes = new Label();
             btnCrearArchivo = new Button();
-            lblArchivoRecepcion = new Label();
-            txtArchivoRecepcion = new TextBox();
             gbArchivos.SuspendLayout();
             SuspendLayout();
             // 
@@ -142,123 +142,127 @@
             // 
             // gbArchivos
             // 
+            gbArchivos.Controls.Add(pbRecepcionArchivo);
+            gbArchivos.Controls.Add(lblEstadoRecepcion);
+            gbArchivos.Controls.Add(btnEnviarArchivos);
+            gbArchivos.Controls.Add(lvArchivosSeleccionados);
+            gbArchivos.Controls.Add(btnSeleccionarArchivos);
             gbArchivos.Controls.Add(btnCrearArchivo);
             gbArchivos.Controls.Add(labelBytes);
             gbArchivos.Controls.Add(txtTamanoArchivo);
             gbArchivos.Controls.Add(txtArchivoRecepcion);
             gbArchivos.Controls.Add(lblArchivoRecepcion);
-            gbArchivos.Controls.Add(labelRecibirArchivo);
-            gbArchivos.Controls.Add(btnEnviarArchivo);
-            gbArchivos.Controls.Add(btnAbrirArchivo);
-            gbArchivos.Controls.Add(txtArchivoEnvio);
-            gbArchivos.Controls.Add(labelArchivoEnvio);
             gbArchivos.Location = new Point(14, 557);
             gbArchivos.Margin = new Padding(3, 4, 3, 4);
             gbArchivos.Name = "gbArchivos";
             gbArchivos.Padding = new Padding(3, 4, 3, 4);
-            gbArchivos.Size = new Size(412, 155);
+            gbArchivos.Size = new Size(412, 240);
             gbArchivos.TabIndex = 10;
             gbArchivos.TabStop = false;
             gbArchivos.Text = "Transferencia de Archivos";
             // 
-            // labelArchivoEnvio
+            // btnSeleccionarArchivos
             // 
-            labelArchivoEnvio.AutoSize = true;
-            labelArchivoEnvio.Location = new Point(10, 25);
-            labelArchivoEnvio.Name = "labelArchivoEnvio";
-            labelArchivoEnvio.Size = new Size(118, 20);
-            labelArchivoEnvio.TabIndex = 0;
-            labelArchivoEnvio.Text = "Archivo a enviar:";
+            btnSeleccionarArchivos.Location = new Point(290, 22);
+            btnSeleccionarArchivos.Margin = new Padding(3, 4, 3, 4);
+            btnSeleccionarArchivos.Name = "btnSeleccionarArchivos";
+            btnSeleccionarArchivos.Size = new Size(112, 28);
+            btnSeleccionarArchivos.TabIndex = 0;
+            btnSeleccionarArchivos.Text = "SELECCIONAR...";
+            btnSeleccionarArchivos.UseVisualStyleBackColor = true;
+            btnSeleccionarArchivos.Click += btnSeleccionarArchivos_Click;
             // 
-            // txtArchivoEnvio
+            // lvArchivosSeleccionados
             // 
-            txtArchivoEnvio.Location = new Point(130, 22);
-            txtArchivoEnvio.Margin = new Padding(3, 4, 3, 4);
-            txtArchivoEnvio.Name = "txtArchivoEnvio";
-            txtArchivoEnvio.Size = new Size(170, 27);
-            txtArchivoEnvio.TabIndex = 1;
+            lvArchivosSeleccionados.Location = new Point(10, 22);
+            lvArchivosSeleccionados.Margin = new Padding(3, 4, 3, 4);
+            lvArchivosSeleccionados.Name = "lvArchivosSeleccionados";
+            lvArchivosSeleccionados.Size = new Size(270, 100);
+            lvArchivosSeleccionados.TabIndex = 1;
+            lvArchivosSeleccionados.UseCompatibleStateImageBehavior = false;
+            lvArchivosSeleccionados.View = View.Details;
+            lvArchivosSeleccionados.FullRowSelect = true;
             // 
-            // btnAbrirArchivo
+            // btnEnviarArchivos
             // 
-            btnAbrirArchivo.Location = new Point(310, 20);
-            btnAbrirArchivo.Margin = new Padding(3, 4, 3, 4);
-            btnAbrirArchivo.Name = "btnAbrirArchivo";
-            btnAbrirArchivo.Size = new Size(92, 28);
-            btnAbrirArchivo.TabIndex = 2;
-            btnAbrirArchivo.Text = "ABRIR ARCHIVO";
-            btnAbrirArchivo.UseVisualStyleBackColor = true;
-            btnAbrirArchivo.Click += btnAbrirArchivo_Click;
+            btnEnviarArchivos.Location = new Point(290, 55);
+            btnEnviarArchivos.Margin = new Padding(3, 4, 3, 4);
+            btnEnviarArchivos.Name = "btnEnviarArchivos";
+            btnEnviarArchivos.Size = new Size(112, 28);
+            btnEnviarArchivos.TabIndex = 2;
+            btnEnviarArchivos.Text = "ENVIAR ARCHIVOS";
+            btnEnviarArchivos.UseVisualStyleBackColor = true;
+            btnEnviarArchivos.Click += btnEnviarArchivos_Click;
             // 
-            // btnEnviarArchivo
+            // lblEstadoRecepcion
             // 
-            btnEnviarArchivo.Location = new Point(310, 55);
-            btnEnviarArchivo.Margin = new Padding(3, 4, 3, 4);
-            btnEnviarArchivo.Name = "btnEnviarArchivo";
-            btnEnviarArchivo.Size = new Size(92, 28);
-            btnEnviarArchivo.TabIndex = 3;
-            btnEnviarArchivo.Text = "ENVIAR ARCHIVO";
-            btnEnviarArchivo.UseVisualStyleBackColor = true;
-            btnEnviarArchivo.Click += btnEnviarArchivo_Click;
+            lblEstadoRecepcion.AutoSize = true;
+            lblEstadoRecepcion.Location = new Point(10, 130);
+            lblEstadoRecepcion.Name = "lblEstadoRecepcion";
+            lblEstadoRecepcion.Size = new Size(180, 20);
+            lblEstadoRecepcion.TabIndex = 5;
+            lblEstadoRecepcion.Text = "Recepción: esperando...";
             // 
-            // labelRecibirArchivo
+            // pbRecepcionArchivo
             // 
-            labelRecibirArchivo.AutoSize = true;
-            labelRecibirArchivo.Location = new Point(10, 65);
-            labelRecibirArchivo.Name = "labelRecibirArchivo";
-            labelRecibirArchivo.Size = new Size(114, 20);
-            labelRecibirArchivo.TabIndex = 4;
-            labelRecibirArchivo.Text = "Recibir archivo:";
-            // 
-            // txtTamanoArchivo
-            // 
-            txtTamanoArchivo.Location = new Point(130, 117);
-            txtTamanoArchivo.Margin = new Padding(3, 4, 3, 4);
-            txtTamanoArchivo.Name = "txtTamanoArchivo";
-            txtTamanoArchivo.Size = new Size(105, 27);
-            txtTamanoArchivo.TabIndex = 5;
-            // 
-            // labelBytes
-            // 
-            labelBytes.AutoSize = true;
-            labelBytes.Location = new Point(240, 120);
-            labelBytes.Name = "labelBytes";
-            labelBytes.Size = new Size(42, 20);
-            labelBytes.TabIndex = 6;
-            labelBytes.Text = "bytes";
-            // 
-            // btnCrearArchivo
-            // 
-            btnCrearArchivo.Location = new Point(310, 115);
-            btnCrearArchivo.Margin = new Padding(3, 4, 3, 4);
-            btnCrearArchivo.Name = "btnCrearArchivo";
-            btnCrearArchivo.Size = new Size(92, 28);
-            btnCrearArchivo.TabIndex = 7;
-            btnCrearArchivo.Text = "CREAR ARCHIVO";
-            btnCrearArchivo.UseVisualStyleBackColor = true;
-            btnCrearArchivo.Click += btnCrearArchivo_Click;
+            pbRecepcionArchivo.Location = new Point(10, 155);
+            pbRecepcionArchivo.Margin = new Padding(3, 4, 3, 4);
+            pbRecepcionArchivo.Name = "pbRecepcionArchivo";
+            pbRecepcionArchivo.Size = new Size(392, 20);
+            pbRecepcionArchivo.TabIndex = 6;
             // 
             // lblArchivoRecepcion
             // 
             lblArchivoRecepcion.AutoSize = true;
-            lblArchivoRecepcion.Location = new Point(10, 90);
+            lblArchivoRecepcion.Location = new Point(10, 185);
             lblArchivoRecepcion.Name = "lblArchivoRecepcion";
             lblArchivoRecepcion.Size = new Size(130, 20);
             lblArchivoRecepcion.TabIndex = 8;
-            lblArchivoRecepcion.Text = "Archivo a recibir:";
+            lblArchivoRecepcion.Text = "Recepción manual:";
             // 
             // txtArchivoRecepcion
             // 
-            txtArchivoRecepcion.Location = new Point(130, 87);
+            txtArchivoRecepcion.Location = new Point(130, 182);
             txtArchivoRecepcion.Margin = new Padding(3, 4, 3, 4);
             txtArchivoRecepcion.Name = "txtArchivoRecepcion";
+            txtArchivoRecepcion.PlaceholderText = "nombre archivo";
             txtArchivoRecepcion.Size = new Size(170, 27);
             txtArchivoRecepcion.TabIndex = 9;
+            // 
+            // txtTamanoArchivo
+            // 
+            txtTamanoArchivo.Location = new Point(130, 212);
+            txtTamanoArchivo.Margin = new Padding(3, 4, 3, 4);
+            txtTamanoArchivo.Name = "txtTamanoArchivo";
+            txtTamanoArchivo.PlaceholderText = "tamaño";
+            txtTamanoArchivo.Size = new Size(105, 27);
+            txtTamanoArchivo.TabIndex = 10;
+            // 
+            // labelBytes
+            // 
+            labelBytes.AutoSize = true;
+            labelBytes.Location = new Point(240, 215);
+            labelBytes.Name = "labelBytes";
+            labelBytes.Size = new Size(42, 20);
+            labelBytes.TabIndex = 11;
+            labelBytes.Text = "bytes";
+            // 
+            // btnCrearArchivo
+            // 
+            btnCrearArchivo.Location = new Point(310, 210);
+            btnCrearArchivo.Margin = new Padding(3, 4, 3, 4);
+            btnCrearArchivo.Name = "btnCrearArchivo";
+            btnCrearArchivo.Size = new Size(92, 28);
+            btnCrearArchivo.TabIndex = 12;
+            btnCrearArchivo.Text = "CREAR ARCHIVO";
+            btnCrearArchivo.UseVisualStyleBackColor = true;
+            btnCrearArchivo.Click += btnCrearArchivo_Click;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(440, 725);
+            ClientSize = new Size(440, 810);
             Controls.Add(gbArchivos);
             Controls.Add(labelVelocidad);
             Controls.Add(cbVelocidad);
@@ -293,15 +297,15 @@
         private Label labelVelocidad;
         private ComboBox cbVelocidad;
         private GroupBox gbArchivos;
-        private Label labelArchivoEnvio;
-        private TextBox txtArchivoEnvio;
-        private Button btnAbrirArchivo;
-        private Button btnEnviarArchivo;
-        private Label labelRecibirArchivo;
+        private Button btnSeleccionarArchivos;
+        private ListView lvArchivosSeleccionados;
+        private Button btnEnviarArchivos;
+        private Label lblEstadoRecepcion;
+        private ProgressBar pbRecepcionArchivo;
+        private Label lblArchivoRecepcion;
+        private TextBox txtArchivoRecepcion;
         private TextBox txtTamanoArchivo;
         private Label labelBytes;
         private Button btnCrearArchivo;
-        private Label lblArchivoRecepcion;
-        private TextBox txtArchivoRecepcion;
     }
 }

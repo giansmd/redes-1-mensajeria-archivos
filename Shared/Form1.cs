@@ -12,6 +12,9 @@ namespace winProyComunicacion
         private delegate void AccedeControl(string mens);
         AccedeControl MuestraMensajeRCH;
 
+        private delegate void AccedeControlProgreso(string nombreArchivo, long enviado, long total);
+        AccedeControlProgreso MuestraProgresoArchivo;
+
         private bool PuertoSeleccionadoAutomatico = false;
 
         public Form1()
@@ -19,11 +22,20 @@ namespace winProyComunicacion
             InitializeComponent();
             Enlace = new ClassComunicacion();
             MuestraMensajeRCH = new AccedeControl(MostrandoMensaje);
+            MuestraProgresoArchivo = new AccedeControlProgreso(ActualizandoProgresoArchivo);
+
+            lvArchivosSeleccionados.Columns.Add("Archivo", 140);
+            lvArchivosSeleccionados.Columns.Add("Tamaño (bytes)", 80);
+            lvArchivosSeleccionados.Columns.Add("Progreso", 70);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             Enlace.LlegoMensaje += Enlace_llegoMensaje;
+            Enlace.ProgresoEnvio += Enlace_ProgresoEnvio;
+            Enlace.ArchivoEnvioCompletado += Enlace_ArchivoEnvioCompletado;
+            Enlace.MetadatosRecibidos += Enlace_MetadatosRecibidos;
+            Enlace.ProgresoRecepcion += Enlace_ProgresoRecepcion;
             CargarVelocidades();
             CargarPuertos();
 
@@ -56,6 +68,7 @@ namespace winProyComunicacion
                 return;
             }
 
+            Enlace.NombreUsuario = usuario;
             Enlace.EnviarMensaje($"{usuario}|{mensaje}");
             MostrarMensajeLocal(usuario, mensaje);
             txtMensaje.Clear();
@@ -64,27 +77,33 @@ namespace winProyComunicacion
         private void MostrandoMensaje(string mensaje)
         {
             var (usuario, texto) = SepararMensaje(mensaje);
-            AgregarMensajeFormateado(usuario, texto);
+            string usuarioLocal = txtUsuario.Text.Trim();
+            bool esPropio = string.Equals(usuario, usuarioLocal, StringComparison.OrdinalIgnoreCase);
+            AgregarMensajeFormateado(usuario, texto, esPropio);
         }
 
         private void MostrarMensajeLocal(string usuario, string mensaje)
         {
-            AgregarMensajeFormateado(usuario, mensaje);
+            AgregarMensajeFormateado(usuario, mensaje, true);
         }
 
-        private void AgregarMensajeFormateado(string usuario, string mensaje)
-        {
-            AgregarLineaEnNegrita(usuario);
-            rchConversacion.AppendText(mensaje + Environment.NewLine + Environment.NewLine);
-        }
-
-        private void AgregarLineaEnNegrita(string texto)
+        private void AgregarMensajeFormateado(string usuario, string mensaje, bool esPropio)
         {
             rchConversacion.SelectionStart = rchConversacion.TextLength;
             rchConversacion.SelectionLength = 0;
+
+            HorizontalAlignment alineacion = esPropio ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+            rchConversacion.SelectionAlignment = alineacion;
+
+            Color colorFondo = esPropio ? Color.FromArgb(220, 248, 198) : Color.FromArgb(230, 230, 230);
+            rchConversacion.SelectionBackColor = colorFondo;
+
             rchConversacion.SelectionFont = new Font(rchConversacion.Font, FontStyle.Bold);
-            rchConversacion.AppendText(texto + Environment.NewLine);
+            rchConversacion.AppendText(usuario + Environment.NewLine);
             rchConversacion.SelectionFont = rchConversacion.Font;
+            rchConversacion.AppendText(mensaje + Environment.NewLine + Environment.NewLine);
+
+            rchConversacion.ScrollToCaret();
         }
 
         private (string Usuario, string Mensaje) SepararMensaje(string mensaje)
@@ -207,26 +226,67 @@ namespace winProyComunicacion
                 && cbVelocidad.SelectedItem is not null;
         }
 
-        private void btnAbrirArchivo_Click(object sender, EventArgs e)
+        private void btnSeleccionarArchivos_Click(object sender, EventArgs e)
         {
-            var nombre = txtArchivoEnvio.Text.Trim();
-            if (string.IsNullOrWhiteSpace(nombre))
+            using (OpenFileDialog dialogo = new OpenFileDialog())
             {
-                MessageBox.Show("Ingrese un nombre de archivo.");
-                return;
+                dialogo.Multiselect = true;
+                dialogo.Title = "Seleccionar archivos para enviar";
+                dialogo.Filter = "Todos los archivos (*.*)|*.*";
+
+                if (dialogo.ShowDialog() == DialogResult.OK && dialogo.FileNames.Length > 0)
+                {
+                    if (dialogo.FileNames.Length > 5)
+                    {
+                        MessageBox.Show("Máximo 5 archivos simultáneos. Se enviarán los primeros 5.");
+                    }
+
+                    lvArchivosSeleccionados.Items.Clear();
+
+                    int limite = Math.Min(dialogo.FileNames.Length, 5);
+                    for (int i = 0; i < limite; i++)
+                    {
+                        string ruta = dialogo.FileNames[i];
+                        string nombre = Path.GetFileName(ruta);
+                        long tamano = new FileInfo(ruta).Length;
+
+                        ListViewItem item = new ListViewItem(nombre);
+                        item.SubItems.Add(tamano.ToString());
+                        item.SubItems.Add("0%");
+                        item.Tag = ruta;
+                        lvArchivosSeleccionados.Items.Add(item);
+                    }
+                }
             }
-            Enlace.AbrirArchivo(nombre);
         }
 
-        private void btnEnviarArchivo_Click(object sender, EventArgs e)
+        private void btnEnviarArchivos_Click(object sender, EventArgs e)
         {
-            var nombre = txtArchivoEnvio.Text.Trim();
-            if (string.IsNullOrWhiteSpace(nombre))
+            if (lvArchivosSeleccionados.Items.Count == 0)
             {
-                MessageBox.Show("Primero abra un archivo con \"ABRIR ARCHIVO\".");
+                MessageBox.Show("Primero seleccione archivos con \"SELECCIONAR...\".");
                 return;
             }
-            Enlace.inicioTransmisionArchivo1();
+
+            if (!PuedeEnviar())
+            {
+                MessageBox.Show("Complete nombre, puerto COM y velocidad antes de enviar.");
+                return;
+            }
+
+            string[] rutas = new string[lvArchivosSeleccionados.Items.Count];
+            for (int i = 0; i < lvArchivosSeleccionados.Items.Count; i++)
+            {
+                rutas[i] = lvArchivosSeleccionados.Items[i].Tag as string;
+            }
+
+            foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+            {
+                item.SubItems[2].Text = "pendiente";
+            }
+
+            Enlace.NombreUsuario = txtUsuario.Text.Trim();
+            Enlace.EnviarArchivos(rutas);
         }
 
         private void btnCrearArchivo_Click(object sender, EventArgs e)
@@ -248,6 +308,69 @@ namespace winProyComunicacion
                 return;
             }
             Enlace.CrearArchivo(nombre, tamano);
+            lblEstadoRecepcion.Text = "Recepción manual: " + nombre + " (" + tamano + " bytes)";
+        }
+
+        private void Enlace_ProgresoEnvio(string nombreArchivo, long enviado, long total)
+        {
+            Invoke(MuestraProgresoArchivo, nombreArchivo, enviado, total);
+        }
+
+        private void ActualizandoProgresoArchivo(string nombreArchivo, long enviado, long total)
+        {
+            foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+            {
+                if (item.Text == nombreArchivo)
+                {
+                    int porcentaje = total > 0 ? (int)(enviado * 100 / total) : 100;
+                    item.SubItems[2].Text = porcentaje + "%";
+                    break;
+                }
+            }
+        }
+
+        private void Enlace_ArchivoEnvioCompletado(string nombreArchivo)
+        {
+            Invoke(() =>
+            {
+                foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+                {
+                    if (item.Text == nombreArchivo)
+                    {
+                        item.SubItems[2].Text = "COMPLETADO";
+                        item.BackColor = Color.LightGreen;
+                        break;
+                    }
+                }
+            });
+        }
+
+        private void Enlace_MetadatosRecibidos(string nombreArchivo, long tamano)
+        {
+            Invoke(() =>
+            {
+                lblEstadoRecepcion.Text = "Recibiendo: " + nombreArchivo + " (" + tamano + " bytes)";
+                pbRecepcionArchivo.Value = 0;
+                pbRecepcionArchivo.Maximum = 100;
+            });
+        }
+
+        private void Enlace_ProgresoRecepcion(long recibido, long total)
+        {
+            Invoke(() =>
+            {
+                if (total > 0)
+                {
+                    int porcentaje = (int)(recibido * 100 / total);
+                    if (porcentaje > 100) porcentaje = 100;
+                    pbRecepcionArchivo.Value = porcentaje;
+                }
+
+                if (recibido >= total && total > 0)
+                {
+                    lblEstadoRecepcion.Text = "Recepción: completado ✓";
+                }
+            });
         }
     }
 }
