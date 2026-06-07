@@ -1,9 +1,15 @@
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
+
 namespace winProyComunicacion
 {
     public partial class Form1 : Form
     {
         private const string DefaultRemoteUser = "Remoto";
         private static readonly int[] VelocidadesSoportadas = [900, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800];
+
+        [DllImport("user32.dll")]
+        private static extern bool LockWindowUpdate(IntPtr hWnd);
 
         public static string? PuertoPreferido { get; set; }
 
@@ -16,6 +22,7 @@ namespace winProyComunicacion
         AccedeControlProgreso MuestraProgresoArchivo;
 
         private bool PuertoSeleccionadoAutomatico = false;
+        private Panel anclaScroll = new Panel();
 
         public Form1()
         {
@@ -27,6 +34,55 @@ namespace winProyComunicacion
             lvArchivosSeleccionados.Columns.Add("Archivo", 140);
             lvArchivosSeleccionados.Columns.Add("Tamaño (bytes)", 80);
             lvArchivosSeleccionados.Columns.Add("Progreso", 70);
+
+            AplicarBotonesRedondeados();
+
+            anclaScroll.Size = new Size(1, 1);
+            anclaScroll.BackColor = Color.Transparent;
+            scrollChat.Controls.Add(anclaScroll);
+
+            scrollChat.Resize += (s, e) =>
+            {
+                LockWindowUpdate(scrollChat.Handle);
+                ReposicionarMensajes();
+                LockWindowUpdate(IntPtr.Zero);
+                IrAlUltimoMensaje();
+            };
+            scrollChat.Click += (s, e) => txtMensaje.Focus();
+        }
+
+        private void AplicarBotonesRedondeados()
+        {
+            RedondearBoton(btnEnviaMensaje, 20);
+            RedondearBoton(btnSeleccionarArchivos, 15);
+            RedondearBoton(btnEnviarArchivos, 15);
+            RedondearBoton(btnCrearArchivo, 15);
+        }
+
+        private void RedondearBoton(Button boton, int radio)
+        {
+            Rectangle rect = new Rectangle(0, 0, boton.Width, boton.Height);
+            using GraphicsPath path = CrearRutaRedondeada(rect, radio);
+            boton.Region = new Region(path);
+        }
+
+        private GraphicsPath CrearRutaRedondeada(Rectangle rect, int radio)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int diametro = radio * 2;
+            Size size = new Size(diametro, diametro);
+            Rectangle arc = new Rectangle(rect.Location, size);
+
+            path.AddArc(arc, 180, 90);
+            arc.X = rect.Right - diametro;
+            path.AddArc(arc, 270, 90);
+            arc.Y = rect.Bottom - diametro;
+            path.AddArc(arc, 0, 90);
+            arc.X = rect.Left;
+            path.AddArc(arc, 90, 90);
+
+            path.CloseFigure();
+            return path;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -54,6 +110,20 @@ namespace winProyComunicacion
 
         private void btnEnviaMensaje_Click(object sender, EventArgs e)
         {
+            EnviarMensajeActual();
+        }
+
+        private void txtMensaje_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Enter && !e.Handled)
+            {
+                e.Handled = true;
+                EnviarMensajeActual();
+            }
+        }
+
+        private void EnviarMensajeActual()
+        {
             if (!PuedeEnviar())
             {
                 MessageBox.Show("Complete nombre, puerto COM y velocidad antes de enviar.");
@@ -64,7 +134,6 @@ namespace winProyComunicacion
             var mensaje = txtMensaje.Text.Trim();
             if (string.IsNullOrWhiteSpace(mensaje))
             {
-                MessageBox.Show("Ingrese un mensaje antes de enviar.");
                 return;
             }
 
@@ -72,6 +141,7 @@ namespace winProyComunicacion
             Enlace.EnviarMensaje($"{usuario}|{mensaje}");
             MostrarMensajeLocal(usuario, mensaje);
             txtMensaje.Clear();
+            txtMensaje.Focus();
         }
 
         private void MostrandoMensaje(string mensaje)
@@ -89,21 +159,137 @@ namespace winProyComunicacion
 
         private void AgregarMensajeFormateado(string usuario, string mensaje, bool esPropio)
         {
-            rchConversacion.SelectionStart = rchConversacion.TextLength;
-            rchConversacion.SelectionLength = 0;
+            int anchoDisponible = scrollChat.ClientSize.Width - scrollChat.Padding.Horizontal;
+            int anchoMax = (int)(anchoDisponible * 0.65);
 
-            HorizontalAlignment alineacion = esPropio ? HorizontalAlignment.Right : HorizontalAlignment.Left;
-            rchConversacion.SelectionAlignment = alineacion;
+            Label burbuja = new Label();
+            burbuja.Text = mensaje;
+            burbuja.Font = new Font("Segoe UI", 10F);
+            burbuja.ForeColor = Color.FromArgb(50, 50, 50);
+            burbuja.AutoSize = true;
+            burbuja.MaximumSize = new Size(anchoMax, 0);
+            burbuja.Padding = new Padding(12, 8, 12, 8);
+            burbuja.BackColor = esPropio ? Color.FromArgb(220, 248, 198) : Color.White;
+            burbuja.Tag = esPropio;
 
-            Color colorFondo = esPropio ? Color.FromArgb(220, 248, 198) : Color.FromArgb(230, 230, 230);
-            rchConversacion.SelectionBackColor = colorFondo;
+            Panel contenedor = new Panel();
+            contenedor.BackColor = Color.Transparent;
+            contenedor.Tag = esPropio;
+            contenedor.Name = "cont_" + scrollChat.Controls.Count;
 
-            rchConversacion.SelectionFont = new Font(rchConversacion.Font, FontStyle.Bold);
-            rchConversacion.AppendText(usuario + Environment.NewLine);
-            rchConversacion.SelectionFont = rchConversacion.Font;
-            rchConversacion.AppendText(mensaje + Environment.NewLine + Environment.NewLine);
+            Panel cola = new Panel();
+            cola.Size = new Size(10, 12);
+            cola.BackColor = Color.Transparent;
+            cola.Tag = esPropio;
+            cola.Name = "cola_" + scrollChat.Controls.Count;
+            cola.Paint += (s, e) => DibujarCola(e.Graphics, cola.ClientRectangle, esPropio);
 
-            rchConversacion.ScrollToCaret();
+            contenedor.Controls.Add(burbuja);
+            contenedor.Controls.Add(cola);
+
+            scrollChat.Controls.Add(contenedor);
+            ReposicionarMensajes();
+            IrAlUltimoMensaje();
+        }
+
+        private void DibujarCola(Graphics g, Rectangle rect, bool esPropio)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            Color color = esPropio ? Color.FromArgb(220, 248, 198) : Color.White;
+            using SolidBrush brush = new SolidBrush(color);
+
+            Point[] puntos;
+            if (esPropio)
+            {
+                puntos = new Point[]
+                {
+                    new Point(0, 0),
+                    new Point(rect.Width, rect.Height / 2),
+                    new Point(0, rect.Height)
+                };
+            }
+            else
+            {
+                puntos = new Point[]
+                {
+                    new Point(rect.Width, 0),
+                    new Point(0, rect.Height / 2),
+                    new Point(rect.Width, rect.Height)
+                };
+            }
+            g.FillPolygon(brush, puntos);
+        }
+
+        private void ReposicionarMensajes()
+        {
+            scrollChat.SuspendLayout();
+
+            int espacioEntre = 6;
+            int anchoDisponible = scrollChat.ClientSize.Width - scrollChat.Padding.Horizontal;
+            int anchoBurbuja = (int)(anchoDisponible * 0.65);
+
+            foreach (Control c in scrollChat.Controls)
+            {
+                if (c is Panel contenedor && contenedor.Tag is bool esPropio)
+                {
+                    Label burbuja = null;
+                    Panel cola = null;
+                    foreach (Control hijo in contenedor.Controls)
+                    {
+                        if (hijo is Label lbl) burbuja = lbl;
+                        else if (hijo is Panel pnl && pnl.Name.StartsWith("cola_")) cola = pnl;
+                    }
+
+                    if (burbuja != null)
+                    {
+                        burbuja.MaximumSize = new Size(anchoBurbuja, 0);
+                        contenedor.AutoSize = false;
+
+                        int colaAncho = 10;
+                        if (cola != null)
+                        {
+                            cola.Size = new Size(colaAncho, 12);
+                            if (esPropio)
+                            {
+                                burbuja.Location = new Point(0, 0);
+                                cola.Location = new Point(burbuja.PreferredSize.Width, 0);
+                            }
+                            else
+                            {
+                                cola.Location = new Point(0, 0);
+                                burbuja.Location = new Point(colaAncho, 0);
+                            }
+                        }
+
+                        contenedor.Size = new Size(
+                            burbuja.PreferredSize.Width + colaAncho,
+                            burbuja.PreferredSize.Height);
+                    }
+                }
+            }
+
+            int y = scrollChat.Padding.Top;
+            foreach (Control c in scrollChat.Controls)
+            {
+                if (c is Panel contenedor && contenedor.Tag is bool esPropio)
+                {
+                    int x = esPropio
+                        ? scrollChat.ClientSize.Width - contenedor.Width - scrollChat.Padding.Right
+                        : scrollChat.Padding.Left;
+                    contenedor.Location = new Point(x, y);
+                    y = contenedor.Bottom + espacioEntre;
+                }
+            }
+
+            int alturaTotal = y - espacioEntre + scrollChat.Padding.Bottom;
+            anclaScroll.Location = new Point(0, alturaTotal);
+
+            scrollChat.ResumeLayout();
+        }
+
+        private void IrAlUltimoMensaje()
+        {
+            scrollChat.AutoScrollPosition = new Point(0, int.MaxValue);
         }
 
         private (string Usuario, string Mensaje) SepararMensaje(string mensaje)
@@ -192,7 +378,7 @@ namespace winProyComunicacion
 
         private void LimpiarConversacion()
         {
-            rchConversacion.Clear();
+            scrollChat.Controls.Clear();
             txtUsuario.Clear();
             txtMensaje.Clear();
         }
