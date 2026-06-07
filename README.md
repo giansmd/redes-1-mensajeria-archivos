@@ -27,7 +27,50 @@ Tramas de **1024 bytes** sobre puerto serie RS-232 (8 bits datos, 2 bits parada,
 
 ## Cambios Realizados (relación para el profesor)
 
-### 1. Semáforos para Control de Concurrencia (`classComunicacion.cs:42-43`)
+### 1. Clase Separada `ClassTransferenciaArchivo` (`Shared/ClassTransferenciaArchivo.cs`)
+
+Por indicación del profesor, se extrajo toda la lógica de transferencia de archivos a una nueva clase independiente. `ClassComunicacion` mantiene arreglos de 5 objetos para envío y 5 para recepción:
+
+```csharp
+private ClassTransferenciaArchivo[] _envios;     // índices 0 a 4
+private ClassTransferenciaArchivo[] _recepciones; // índices 0 a 4
+```
+
+Cada objeto `ClassTransferenciaArchivo` gestiona de forma independiente:
+- Su propio `FileStream` (`_flujoArchivo`)
+- Su propio `BinaryReader` (`_lectorArchivo`) o `BinaryWriter` (`_escritorArchivo`)
+- Su propio `Thread` (`_hebraTrabajo`)
+- Su propio progreso (`Avance`, `TamanoArchivo`)
+- Sus propios eventos (`ProgresoEnvio`, `ArchivoEnvioCompletado`, `ProgresoRecepcion`)
+
+**Métodos principales:**
+| Método | Propósito |
+|--------|-----------|
+| `PrepararEnvio(indice, ruta, nombre, puerto, semaforoPuerto, semaforoEnvios, usuario)` | Abre el archivo para lectura |
+| `IniciarEnvio()` | Lanza el hilo que ejecuta `EjecutarEnvio()` |
+| `EjecutarEnvio()` | Envía trama "F" + chunks "A" con semáforos |
+| `PrepararRecepcion(indice, nombre, tamano)` | Crea archivo para escritura |
+| `EscribirChunk(buffer, offset, longitud)` | Escribe chunk recibido |
+| `FinalizarRecepcion()` | Cierra el archivo recibido |
+| `Cerrar()` | Libera todos los recursos |
+
+### 2. Índice en la Trama "A" y "F" (Cabecera de 6 bytes)
+
+Se expandió la cabecera de 5 a 6 bytes para incluir el índice del archivo (0-4):
+
+| Byte 0 | Byte 1 | Bytes 2-5 | Total |
+|--------|--------|------------|-------|
+| `'A'` o `'F'` | índice `'0'`-`'4'` | tamaño en 4 dígitos | 6 bytes |
+
+**Ejemplos:**
+- `"A01018"` → archivo índice 0, chunk de 1018 bytes
+- `"A20042"` → archivo índice 2, último chunk de 42 bytes
+- `"F31012"` → metadatos archivo índice 3, 12 bytes de metadata
+- `"M0004"` (mensaje, sigue con cabecera de 5 bytes sin índice)
+
+En recepción, `SPuerto_DataReceived` lee el índice del byte 1 y rutea el chunk al `_recepciones[indice]` correspondiente.
+
+### 3. Semáforos para Control de Concurrencia (`classComunicacion.cs:29-30`)
 
 Se agregaron dos semáforos usando la clase `SemaphoreSlim` de .NET:
 
@@ -144,19 +187,29 @@ Método `AsegurarDirectorioRedes1()`: verifica y crea el directorio `C:\REDES1\`
 | `_semaforoPuerto` | `SemaphoreSlim(1,1)` | Exclusión mutua para escritura al puerto |
 | `_semaforoEnvios` | `SemaphoreSlim(5,5)` | Límite de 5 envíos simultáneos |
 | `_enviosActivos` | `int` | Contador atómico de envíos en curso |
-| `tramaCabacera` | `byte[5]` | Cabecera de trama (tipo + longitud) |
+| `_envios` | `ClassTransferenciaArchivo[5]` | Arreglo de objetos de envío (índices 0-4) |
+| `_recepciones` | `ClassTransferenciaArchivo[5]` | Arreglo de objetos de recepción (índices 0-4) |
+| `tramaCabacera` | `byte[6]` | Cabecera de trama (6 bytes para A/F, 5 para M) |
 | `tramaEnvioBytes` | `byte[1024]` | Buffer de relleno (bytes `@`) |
 | `tramaMensajeEnvio` | `byte[1024]` | Buffer para mensaje a enviar |
 | `tramaRecepcionMensaje` | `byte[1024]` | Buffer de recepción |
-| `tramaEnvioArchivo` | `byte[1024]` | Buffer para datos de archivo |
-| `FlujoLecturaArchivo` | `FileStream` | Stream de lectura del archivo a enviar |
-| `leyendoTramaArchivoEnvio` | `BinaryReader` | Lector binario del archivo |
-| `FlujoEscrituraArchivo` | `FileStream` | Stream de escritura del archivo recibido |
-| `EscribiendoTramaArchivoRecepcion` | `BinaryWriter` | Escritor binario del archivo recibido |
-| `tamanoArchivo` | `long` | Tamaño total del archivo a enviar |
-| `tamanoArchivoRecepcion` | `long` | Tamaño esperado del archivo a recibir |
-| `avanceRecepcionArchivo` | `long` | Bytes recibidos acumulados |
 | `TAREA` | `string` | Identificador de trama (`"M"`, `"A"`, `"F"`, `"I"`) |
+| `TAMANO_CHUNK` | `const int 1018` | Tamaño de datos por chunk de archivo |
+| `MAX_ARCHIVOS` | `const int 5` | Máximo de archivos simultáneos |
+
+### `ClassTransferenciaArchivo.cs`
+
+| Variable | Tipo | Propósito |
+|----------|------|-----------|
+| `Indice` | `int` | Índice del archivo (0-4) en el arreglo |
+| `NombreArchivo` | `string` | Nombre del archivo |
+| `TamanoArchivo` | `long` | Tamaño total en bytes |
+| `Avance` | `long` | Bytes enviados/recibidos (para barra de progreso) |
+| `EstaActivo` | `bool` | Indica si el objeto está en uso |
+| `_flujoArchivo` | `FileStream` | Stream del archivo |
+| `_lectorArchivo` | `BinaryReader` | Lector binario (envío) |
+| `_escritorArchivo` | `BinaryWriter` | Escritor binario (recepción) |
+| `_hebraTrabajo` | `Thread` | Hilo de envío o recepción |
 
 ### Eventos
 
@@ -199,25 +252,36 @@ Método `AsegurarDirectorioRedes1()`: verifica y crea el directorio `C:\REDES1\`
 ## Resumen de Hilos y Sincronización
 
 ```
-┌─────────────────────────────────────────┐
-│         _semaforoEnvios (5 slots)        │
-│  ┌──────┐ ┌──────┐ ┌──────┐             │
-│  │Hilo 1│ │Hilo 2│ │Hilo 3│ ... (max 5) │
-│  └──┬───┘ └──┬───┘ └──┬───┘             │
-│     │        │        │                  │
-│     └────────┼────────┘                  │
-│              ▼                           │
-│     _semaforoPuerto (1 slot)             │
-│              │                           │
-│              ▼                           │
-│       sPuerto.Write()                    │
-│       (puerto serie RS-232)              │
-└─────────────────────────────────────────┘
+ClassComunicacion
+├── _envios[0..4]  →  ClassTransferenciaArchivo (c/FileStream, BinaryReader, Thread)
+├── _recepciones[0..4] → ClassTransferenciaArchivo (c/FileStream, BinaryWriter)
+├── hebraEnvio → EnviandoMensaje()
+└── procesoRecibirMensaje → RecibiendoMensaje()
+
+         _semaforoEnvios (5 slots)
+  ┌──────┐ ┌──────┐ ┌──────┐             
+  │Arch 0│ │Arch 1│ │Arch 2│ ... (max 5) 
+  └──┬───┘ └──┬───┘ └──┬───┘             
+     │        │        │                  
+     └────────┼────────┘                  
+              ▼                           
+     _semaforoPuerto (1 slot)             
+              │                           
+              ▼                           
+       sPuerto.Write()                    
+       (puerto serie RS-232)              
 
 Mensajes (hebraEnvio) ──► _semaforoPuerto ──► sPuerto.Write()
-                          (comparten el mismo semáforo)
+                          (compartido, se intercalan entre chunks)
+
+Recepción:
+  sPuerto.DataReceived → lee tramaRecepcionMensaje
+  ├── 'M' → RecibiendoMensaje (thread separado)
+  ├── 'F' + índice → _recepciones[índice].PrepararRecepcion()
+  └── 'A' + índice → _recepciones[índice].EscribirChunk()
 ```
 
-- Los mensajes y los archivos comparten `_semaforoPuerto`: no hay bloqueo mutuo, uno espera al otro
-- El envío de archivos usa `_semaforoEnvios` (5 slots): máximo 5 archivos en paralelo
-- La recepción (`SPuerto_DataReceived`) no compite por el puerto porque solo lee; la escritura de archivos recibidos (`EscribiendoRecepcionArchivo`) escribe a `FileStream`, no al puerto serie
+- **Índice en trama:** El byte 1 de las tramas `"A"` y `"F"` contiene el índice (0-4), permitiendo rutear cada chunk al `ClassTransferenciaArchivo` correcto
+- **Mensajes vs archivos:** Comparten `_semaforoPuerto`. Cada chunk de archivo libera el semáforo, permitiendo que los mensajes se intercalen. El mensaje solo espera máximo 1 chunk (~1KB a 115200 bps ≈ 0.1 segundos)
+- **5 archivos máximo:** `_semaforoEnvios` con 5 slots y arreglos de tamaño fijo `MAX_ARCHIVOS = 5`
+- **Sobreescritura:** `PrepararRecepcion` usa `FileMode.CreateNew`. Si el archivo existe, auto-renombra: `foto.jpg` → `foto (1).jpg` → `foto (2).jpg`

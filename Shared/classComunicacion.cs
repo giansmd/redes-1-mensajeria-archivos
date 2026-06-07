@@ -15,6 +15,8 @@ namespace winProyComunicacion
         public event Action<string, long> MetadatosRecibidos;
         public event Action<long, long> ProgresoRecepcion;
 
+        public string NombreUsuario { get; set; } = "";
+
         private Thread hebraEnvio;
         private Thread procesoRecibirMensaje;
 
@@ -24,39 +26,56 @@ namespace winProyComunicacion
         private byte[] tramaEnvioBytes;
         private byte[] tramaRecepcionMensaje;
         private byte[] tramaCabacera;
-        private byte[] tramaEnvioArchivo;
-
-        private FileStream FlujoLecturaArchivo;
-        private BinaryReader leyendoTramaArchivoEnvio;
-        private FileStream FlujoEscrituraArchivo;
-        private BinaryWriter EscribiendoTramaArchivoRecepcion;
-
-        private Thread procesoEnvioArchivo;
-
-        long tamanoArchivo;
-
-        long tamanoArchivoRecepcion;
-
-        long avanceRecepcionArchivo;
 
         private readonly SemaphoreSlim _semaforoPuerto = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _semaforoEnvios = new SemaphoreSlim(5, 5);
 
+        private ClassTransferenciaArchivo[] _envios;
+        private ClassTransferenciaArchivo[] _recepciones;
+
         private int _enviosActivos = 0;
 
-        public string NombreUsuario { get; set; } = "";
+        private const int MAX_ARCHIVOS = 5;
+        private const int TAMANO_CHUNK = 1018;
+        private const int TAMANO_TRAMA = 1024;
 
         public ClassComunicacion()
         {
             hebraEnvio = new Thread(EnviandoMensaje);
-            procesoEnvioArchivo = new Thread(LeyendoTransmitiendoArchivo);
             MensajeRecibido = "";
             sPuerto = new SerialPort();
-            tramaCabacera = new byte[5];
-            tramaEnvioBytes = new byte[1024];
-            tramaMensajeEnvio = new byte[1024];
-            tramaRecepcionMensaje = new byte[1024];
-            tramaEnvioArchivo = new byte[1024];
+            tramaCabacera = new byte[6];
+            tramaEnvioBytes = new byte[TAMANO_TRAMA];
+            tramaMensajeEnvio = new byte[TAMANO_TRAMA];
+            tramaRecepcionMensaje = new byte[TAMANO_TRAMA];
+
+            _envios = new ClassTransferenciaArchivo[MAX_ARCHIVOS];
+            _recepciones = new ClassTransferenciaArchivo[MAX_ARCHIVOS];
+
+            for (int i = 0; i < MAX_ARCHIVOS; i++)
+            {
+                _envios[i] = new ClassTransferenciaArchivo();
+                _recepciones[i] = new ClassTransferenciaArchivo();
+            }
+
+            VincularEventos();
+        }
+
+        private void VincularEventos()
+        {
+            for (int i = 0; i < MAX_ARCHIVOS; i++)
+            {
+                int indice = i;
+                _envios[i].ProgresoEnvio += (nombre, enviado, total) =>
+                    ProgresoEnvio?.Invoke(nombre, enviado, total);
+                _envios[i].ArchivoEnvioCompletado += (nombre) =>
+                {
+                    ArchivoEnvioCompletado?.Invoke(nombre);
+                    Interlocked.Decrement(ref _enviosActivos);
+                };
+                _recepciones[i].ProgresoRecepcion += (recibido, total) =>
+                    ProgresoRecepcion?.Invoke(recibido, total);
+            }
         }
 
         public void InicializaPuerto(string nombreP, int velocidad)
@@ -78,11 +97,11 @@ namespace winProyComunicacion
                 sPuerto.Parity = Parity.Odd;
                 sPuerto.ReadBufferSize = 4096;
                 sPuerto.WriteBufferSize = 3072;
-                sPuerto.ReceivedBytesThreshold = 1024;
+                sPuerto.ReceivedBytesThreshold = TAMANO_TRAMA;
                 sPuerto.Encoding = Encoding.UTF8;
                 sPuerto.Open();
 
-                for (int i = 0; i < 1024; i++)
+                for (int i = 0; i < TAMANO_TRAMA; i++)
                     tramaEnvioBytes[i] = 64;
             }
             catch (Exception ex)
@@ -95,21 +114,19 @@ namespace winProyComunicacion
         {
             try
             {
-                CerrarFlujoEnvio();
-
-                string ruta = Path.Combine("C:\\REDES1\\", nombreArchivo);
                 AsegurarDirectorioRedes1();
-                FlujoLecturaArchivo = new FileStream(ruta, FileMode.Open, FileAccess.Read);
-                leyendoTramaArchivoEnvio = new BinaryReader(FlujoLecturaArchivo);
-                tamanoArchivo = FlujoLecturaArchivo.Length;
+                string ruta = Path.Combine("C:\\REDES1\\", nombreArchivo);
+
+                _envios[0].Cerrar();
+                _envios[0].PrepararEnvio(0, ruta, nombreArchivo,
+                    sPuerto, _semaforoPuerto, _semaforoEnvios, NombreUsuario);
+
                 MessageBox.Show("SE ABRIO EL ARCHIVO Y SE CARGO PARA ENVIAR");
                 return true;
             }
             catch (Exception e)
             {
-                FlujoLecturaArchivo = null;
-                leyendoTramaArchivoEnvio = null;
-                tamanoArchivo = 0;
+                _envios[0].Cerrar();
                 MessageBox.Show("Error al abrir archivo", e.Message.ToString());
                 return false;
             }
@@ -122,37 +139,16 @@ namespace winProyComunicacion
                 Directory.CreateDirectory(directorio);
         }
 
-        private void CerrarFlujoEnvio()
-        {
-            if (leyendoTramaArchivoEnvio != null)
-            {
-                leyendoTramaArchivoEnvio.Dispose();
-                leyendoTramaArchivoEnvio = null;
-            }
-            if (FlujoLecturaArchivo != null)
-            {
-                FlujoLecturaArchivo.Dispose();
-                FlujoLecturaArchivo = null;
-            }
-        }
-
         public bool inicioTransmisionArchivo1()
         {
-            if (FlujoLecturaArchivo == null || leyendoTramaArchivoEnvio == null)
+            if (!_envios[0].EstaActivo)
             {
                 MessageBox.Show("Primero debe abrir un archivo con \"ABRIR ARCHIVO\".");
                 return false;
             }
 
-            if (!FlujoLecturaArchivo.CanRead)
-            {
-                MessageBox.Show("El archivo ya fue cerrado. Vuélvalo a abrir con \"ABRIR ARCHIVO\".");
-                return false;
-            }
-
-            tamanoArchivo = FlujoLecturaArchivo.Length;
-            procesoEnvioArchivo = new Thread(LeyendoTransmitiendoArchivo);
-            procesoEnvioArchivo.Start();
+            _envios[0].IniciarEnvio();
+            Interlocked.Increment(ref _enviosActivos);
             return true;
         }
 
@@ -163,174 +159,27 @@ namespace winProyComunicacion
 
             AsegurarDirectorioRedes1();
 
-            foreach (string rutaCompleta in rutasArchivos)
+            int limite = Math.Min(rutasArchivos.Length, MAX_ARCHIVOS);
+
+            for (int i = 0; i < limite; i++)
             {
+                string rutaCompleta = rutasArchivos[i];
                 string nombreArchivo = Path.GetFileName(rutaCompleta);
-                Thread hiloEnvio = new Thread(() => EnviarArchivoIndividual(rutaCompleta, nombreArchivo));
-                hiloEnvio.IsBackground = true;
-                hiloEnvio.Start();
-            }
-        }
+                int indice = i;
 
-        private void EnviarArchivoIndividual(string rutaCompleta, string nombreArchivo)
-        {
-            _semaforoEnvios.Wait();
-            try
-            {
+                _envios[indice].Cerrar();
+                _envios[indice].PrepararEnvio(indice, rutaCompleta, nombreArchivo,
+                    sPuerto, _semaforoPuerto, _semaforoEnvios, NombreUsuario);
+                _envios[indice].IniciarEnvio();
                 Interlocked.Increment(ref _enviosActivos);
-
-                FileStream flujoLectura = null;
-                BinaryReader lector = null;
-                long tamanoArchivoIndividual = 0;
-
-                try
-                {
-                    flujoLectura = new FileStream(rutaCompleta, FileMode.Open, FileAccess.Read);
-                    lector = new BinaryReader(flujoLectura);
-                    tamanoArchivoIndividual = flujoLectura.Length;
-
-                    string metadatos = NombreUsuario + "|" + nombreArchivo + "|" + tamanoArchivoIndividual.ToString();
-                    byte[] tramaMetadatos = Encoding.UTF8.GetBytes(metadatos);
-                    int longitudMetadatos = tramaMetadatos.Length;
-
-                    if (longitudMetadatos > 1019)
-                    {
-                        MessageBox.Show("Nombre de archivo demasiado largo: " + nombreArchivo);
-                        return;
-                    }
-
-                    string cabeceraMeta = "F" + longitudMetadatos.ToString("D4");
-                    byte[] tramaCabeceraMeta = Encoding.UTF8.GetBytes(cabeceraMeta);
-                    byte[] relleno = new byte[1019 - longitudMetadatos];
-                    for (int i = 0; i < relleno.Length; i++) relleno[i] = 64;
-
-                    _semaforoPuerto.Wait();
-                    try
-                    {
-                        sPuerto.Write(tramaCabeceraMeta, 0, 5);
-                        sPuerto.Write(tramaMetadatos, 0, longitudMetadatos);
-                        sPuerto.Write(relleno, 0, relleno.Length);
-                    }
-                    finally
-                    {
-                        _semaforoPuerto.Release();
-                    }
-
-                    long avanceEnvio = 0;
-                    byte[] bufferLectura = new byte[1019];
-
-                    while (tamanoArchivoIndividual - avanceEnvio >= 1019)
-                    {
-                        byte[] cabeceraDatos = Encoding.UTF8.GetBytes("A" + "1019");
-                        lector.Read(bufferLectura, 0, 1019);
-                        avanceEnvio += 1019;
-
-                        _semaforoPuerto.Wait();
-                        try
-                        {
-                            sPuerto.Write(cabeceraDatos, 0, 5);
-                            sPuerto.Write(bufferLectura, 0, 1019);
-                        }
-                        finally
-                        {
-                            _semaforoPuerto.Release();
-                        }
-
-                        ProgresoEnvio?.Invoke(nombreArchivo, avanceEnvio, tamanoArchivoIndividual);
-                    }
-
-                    int bytesRestantes = Convert.ToInt32(tamanoArchivoIndividual - avanceEnvio);
-                    if (bytesRestantes > 0)
-                    {
-                        string cabeceraFinalStr = "A" + bytesRestantes.ToString() + "HHH";
-                        byte[] cabeceraFinal = Encoding.UTF8.GetBytes(cabeceraFinalStr);
-                        lector.Read(bufferLectura, 0, bytesRestantes);
-
-                        _semaforoPuerto.Wait();
-                        try
-                        {
-                            sPuerto.Write(cabeceraFinal, 0, 5);
-                            sPuerto.Write(bufferLectura, 0, bytesRestantes);
-                            sPuerto.Write(tramaEnvioBytes, 0, 1019 - bytesRestantes);
-                        }
-                        finally
-                        {
-                            _semaforoPuerto.Release();
-                        }
-
-                        avanceEnvio += bytesRestantes;
-                        ProgresoEnvio?.Invoke(nombreArchivo, avanceEnvio, tamanoArchivoIndividual);
-                    }
-
-                    ArchivoEnvioCompletado?.Invoke(nombreArchivo);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error al enviar archivo " + nombreArchivo + ": " + ex.Message);
-                }
-                finally
-                {
-                    lector?.Dispose();
-                    flujoLectura?.Dispose();
-                    Interlocked.Decrement(ref _enviosActivos);
-                }
             }
-            finally
-            {
-                _semaforoEnvios.Release();
-            }
-        }
-
-        public void LeyendoTransmitiendoArchivo()
-        {
-            if (FlujoLecturaArchivo == null || leyendoTramaArchivoEnvio == null || !FlujoLecturaArchivo.CanRead)
-                return;
-
-            long avanceEnvio = 0;
-
-            while (tamanoArchivo - avanceEnvio >= 1019)
-            {
-                tramaCabacera = ASCIIEncoding.UTF8.GetBytes("A" + "1019");
-                leyendoTramaArchivoEnvio.Read(tramaEnvioArchivo, 0, 1019);
-                avanceEnvio += 1019;
-
-                _semaforoPuerto.Wait();
-                try
-                {
-                    sPuerto.Write(tramaCabacera, 0, 5);
-                    sPuerto.Write(tramaEnvioArchivo, 0, 1019);
-                }
-                finally
-                {
-                    _semaforoPuerto.Release();
-                }
-            }
-            int bytesRestantes = Convert.ToInt16(tamanoArchivo - avanceEnvio);
-            tramaCabacera = ASCIIEncoding.UTF8.GetBytes("A" + bytesRestantes.ToString() + "HHH");
-            leyendoTramaArchivoEnvio.Read(tramaEnvioArchivo, 0, bytesRestantes);
-
-            _semaforoPuerto.Wait();
-            try
-            {
-                sPuerto.Write(tramaCabacera, 0, 5);
-                sPuerto.Write(tramaEnvioArchivo, 0, bytesRestantes);
-                sPuerto.Write(tramaEnvioBytes, 0, 1019 - bytesRestantes);
-            }
-            finally
-            {
-                _semaforoPuerto.Release();
-            }
-
-            avanceEnvio = avanceEnvio + bytesRestantes;
-
-            CerrarFlujoEnvio();
         }
 
         private void SPuerto_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            if (sPuerto.BytesToRead >= 1024)
+            if (sPuerto.BytesToRead >= TAMANO_TRAMA)
             {
-                sPuerto.Read(tramaRecepcionMensaje, 0, 1024);
+                sPuerto.Read(tramaRecepcionMensaje, 0, TAMANO_TRAMA);
 
                 string TAREA = ASCIIEncoding.UTF8.GetString(tramaRecepcionMensaje, 0, 1);
 
@@ -341,7 +190,7 @@ namespace winProyComunicacion
                         procesoRecibirMensaje.Start();
                         break;
                     case "A":
-                        EscribiendoRecepcionArchivo();
+                        ProcesandoChunkArchivo();
                         break;
                     case "F":
                         ProcesandoMetadatosRecepcion();
@@ -355,17 +204,49 @@ namespace winProyComunicacion
             }
         }
 
+        private void ProcesandoChunkArchivo()
+        {
+            int indice = int.Parse(ASCIIEncoding.UTF8.GetString(tramaRecepcionMensaje, 1, 1));
+            int longitudChunk = Convert.ToInt32(Encoding.UTF8.GetString(tramaRecepcionMensaje, 2, 4));
+
+            if (indice < 0 || indice >= MAX_ARCHIVOS)
+                return;
+
+            var recepcion = _recepciones[indice];
+
+            if (!recepcion.EstaActivo)
+                return;
+
+            if (longitudChunk > 0)
+            {
+                recepcion.EscribirChunk(tramaRecepcionMensaje, 6, longitudChunk);
+
+                if (recepcion.Avance >= recepcion.TamanoArchivo)
+                {
+                    recepcion.FinalizarRecepcion();
+                }
+            }
+        }
+
         private void ProcesandoMetadatosRecepcion()
         {
-            int longitudMeta = Convert.ToInt32(Encoding.UTF8.GetString(tramaRecepcionMensaje, 1, 4));
-            string metadatos = Encoding.UTF8.GetString(tramaRecepcionMensaje, 5, longitudMeta);
+            int indice = int.Parse(ASCIIEncoding.UTF8.GetString(tramaRecepcionMensaje, 1, 1));
+            int longitudMeta = Convert.ToInt32(Encoding.UTF8.GetString(tramaRecepcionMensaje, 2, 4));
+
+            if (indice < 0 || indice >= MAX_ARCHIVOS)
+                return;
+
+            string metadatos = Encoding.UTF8.GetString(tramaRecepcionMensaje, 6, longitudMeta);
             string[] partes = metadatos.Split('|');
+
             if (partes.Length == 3 && long.TryParse(partes[2], out long tamano))
             {
                 string usuarioRemitente = partes[0];
                 string nombreArchivo = partes[1];
                 string nombreConPrefijo = usuarioRemitente + "_" + nombreArchivo;
-                CrearArchivo(nombreConPrefijo, tamano);
+
+                _recepciones[indice].Cerrar();
+                _recepciones[indice].PrepararRecepcion(indice, nombreConPrefijo, tamano);
                 MetadatosRecibidos?.Invoke(nombreConPrefijo, tamano);
             }
         }
@@ -420,54 +301,10 @@ namespace winProyComunicacion
 
         public void CrearArchivo(string nombrecito, long TamanoArchivo)
         {
-            CerrarFlujoRecepcion();
-
             AsegurarDirectorioRedes1();
-            FlujoEscrituraArchivo = new FileStream(Path.Combine("C:\\REDES1\\", nombrecito), FileMode.Create, FileAccess.Write);
-            EscribiendoTramaArchivoRecepcion = new BinaryWriter(FlujoEscrituraArchivo);
-            avanceRecepcionArchivo = 0;
-            tamanoArchivoRecepcion = TamanoArchivo;
-        }
 
-        private void CerrarFlujoRecepcion()
-        {
-            if (EscribiendoTramaArchivoRecepcion != null)
-            {
-                EscribiendoTramaArchivoRecepcion.Dispose();
-                EscribiendoTramaArchivoRecepcion = null;
-            }
-            if (FlujoEscrituraArchivo != null)
-            {
-                FlujoEscrituraArchivo.Dispose();
-                FlujoEscrituraArchivo = null;
-            }
-        }
-
-        public void EscribiendoRecepcionArchivo()
-        {
-            if (EscribiendoTramaArchivoRecepcion == null || FlujoEscrituraArchivo == null)
-                return;
-
-            if (avanceRecepcionArchivo >= tamanoArchivoRecepcion)
-                return;
-
-            if (tamanoArchivoRecepcion - avanceRecepcionArchivo >= 1019)
-            {
-                avanceRecepcionArchivo += 1019;
-                EscribiendoTramaArchivoRecepcion.Write(tramaRecepcionMensaje, 5, 1019);
-                ProgresoRecepcion?.Invoke(avanceRecepcionArchivo, tamanoArchivoRecepcion);
-            }
-            else
-            {
-                int bytesRestantes = Convert.ToInt16(tamanoArchivoRecepcion - avanceRecepcionArchivo);
-                EscribiendoTramaArchivoRecepcion.Write(tramaRecepcionMensaje, 5, bytesRestantes);
-                avanceRecepcionArchivo += bytesRestantes;
-                ProgresoRecepcion?.Invoke(avanceRecepcionArchivo, tamanoArchivoRecepcion);
-                EscribiendoTramaArchivoRecepcion.Dispose();
-                EscribiendoTramaArchivoRecepcion = null;
-                FlujoEscrituraArchivo.Dispose();
-                FlujoEscrituraArchivo = null;
-            }
+            _recepciones[0].Cerrar();
+            _recepciones[0].PrepararRecepcion(0, nombrecito, TamanoArchivo);
         }
     }
 }
