@@ -6,10 +6,7 @@
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
@@ -22,6 +19,8 @@
             rchConversacion = new RichTextBox();
             flowChat = new FlowLayoutPanel();
             scrollChat = new Panel();
+            pnlProgreso = new Panel();
+            lblPorcentaje = new Label();
             labelTitulo = new Label();
             cbCOM = new ComboBox();
             txtUsuario = new TextBox();
@@ -44,6 +43,7 @@
             panelChat = new Panel();
             panelInput = new Panel();
             panelConfig = new Panel();
+
             gbArchivos.SuspendLayout();
             panelHeader.SuspendLayout();
             panelChat.SuspendLayout();
@@ -51,32 +51,36 @@
             panelConfig.SuspendLayout();
             scrollChat.SuspendLayout();
             SuspendLayout();
-            // 
-            // panelHeader
-            // 
-            panelHeader.BackColor = Color.FromArgb(0, 150, 136);
+
+            // ══════════════════════════════════════════════════
+            //  COLORES — modo claro por defecto
+            //  AplicarTema() en Form1.cs se encarga de cambiar
+            //  estos valores al alternar el modo oscuro.
+            // ══════════════════════════════════════════════════
+
+            // ══════════════════════════════════════════════════
+            //  PANEL HEADER  — verde pizarra oscuro
+            // ══════════════════════════════════════════════════
+            panelHeader.BackColor = ClaroHeader;
             panelHeader.Controls.Add(labelTitulo);
             panelHeader.Controls.Add(panelConfig);
             panelHeader.Dock = DockStyle.Top;
             panelHeader.Location = new Point(0, 0);
             panelHeader.Name = "panelHeader";
-            panelHeader.Padding = new Padding(12, 8, 12, 8);
-            panelHeader.Size = new Size(600, 55);
+            panelHeader.Padding = new Padding(14, 0, 14, 0);
+            panelHeader.Size = new Size(620, 72);
             panelHeader.TabIndex = 0;
-            // 
-            // labelTitulo
-            // 
+
+            // Título "SR Chat"
             labelTitulo.AutoSize = true;
             labelTitulo.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             labelTitulo.ForeColor = Color.White;
-            labelTitulo.Location = new Point(12, 10);
+            labelTitulo.Location = new Point(56, 20);     // desplazado por btnModo
             labelTitulo.Name = "labelTitulo";
-            labelTitulo.Size = new Size(100, 30);
             labelTitulo.TabIndex = 3;
             labelTitulo.Text = "SR Chat";
-            // 
-            // panelConfig
-            // 
+
+            // ── panelConfig ────────────────────────────────────
             panelConfig.BackColor = Color.Transparent;
             panelConfig.Controls.Add(labelCOM);
             panelConfig.Controls.Add(cbCOM);
@@ -85,162 +89,141 @@
             panelConfig.Controls.Add(labelUsuario);
             panelConfig.Controls.Add(txtUsuario);
             panelConfig.Dock = DockStyle.Right;
-            panelConfig.Location = new Point(160, 8);
             panelConfig.Name = "panelConfig";
-            panelConfig.Size = new Size(428, 39);
+            panelConfig.Size = new Size(400, 72);
             panelConfig.TabIndex = 0;
-            // 
+
             // labelCOM
-            // 
             labelCOM.AutoSize = true;
-            labelCOM.ForeColor = Color.White;
-            labelCOM.Font = new Font("Segoe UI", 8F);
-            labelCOM.Location = new Point(2, 3);
+            labelCOM.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            labelCOM.ForeColor = Color.FromArgb(180, 230, 225);
+            labelCOM.Location = new Point(4, 12);
             labelCOM.Name = "labelCOM";
-            labelCOM.Size = new Size(35, 13);
-            labelCOM.TabIndex = 6;
-            labelCOM.Text = "Puerto";
-            // 
+            labelCOM.Text = "PUERTO";
+
             // cbCOM
-            // 
-            cbCOM.BackColor = Color.FromArgb(0, 137, 123);
+            cbCOM.BackColor = ClaroComboBg;
             cbCOM.DropDownStyle = ComboBoxStyle.DropDownList;
             cbCOM.FlatStyle = FlatStyle.Flat;
             cbCOM.ForeColor = Color.White;
-            cbCOM.Font = new Font("Segoe UI", 9F);
-            cbCOM.Location = new Point(2, 18);
+            cbCOM.Font = new Font("Consolas", 10F, FontStyle.Bold);
+            cbCOM.Location = new Point(4, 32);
             cbCOM.Name = "cbCOM";
-            cbCOM.Size = new Size(85, 23);
+            cbCOM.Size = new Size(98, 26);
             cbCOM.TabIndex = 4;
             cbCOM.SelectedIndexChanged += cbCOM_SelectedIndexChanged;
-            // 
+
             // labelVelocidad
-            // 
             labelVelocidad.AutoSize = true;
-            labelVelocidad.ForeColor = Color.White;
-            labelVelocidad.Font = new Font("Segoe UI", 8F);
-            labelVelocidad.Location = new Point(95, 3);
+            labelVelocidad.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            labelVelocidad.ForeColor = Color.FromArgb(180, 230, 225);
+            labelVelocidad.Location = new Point(112, 12);
             labelVelocidad.Name = "labelVelocidad";
-            labelVelocidad.Size = new Size(48, 13);
-            labelVelocidad.TabIndex = 9;
-            labelVelocidad.Text = "Vel. bps";
-            // 
+            labelVelocidad.Text = "VEL. BPS";
+
             // cbVelocidad
-            // 
-            cbVelocidad.BackColor = Color.FromArgb(0, 137, 123);
+            cbVelocidad.BackColor = ClaroComboBg;
             cbVelocidad.DropDownStyle = ComboBoxStyle.DropDownList;
             cbVelocidad.FlatStyle = FlatStyle.Flat;
             cbVelocidad.ForeColor = Color.White;
-            cbVelocidad.Font = new Font("Segoe UI", 9F);
-            cbVelocidad.Location = new Point(95, 18);
+            cbVelocidad.Font = new Font("Consolas", 10F, FontStyle.Bold);
+            cbVelocidad.Location = new Point(112, 32);
             cbVelocidad.Name = "cbVelocidad";
-            cbVelocidad.Size = new Size(85, 23);
+            cbVelocidad.Size = new Size(104, 26);
             cbVelocidad.TabIndex = 8;
             cbVelocidad.SelectedIndexChanged += cbVelocidad_SelectedIndexChanged;
-            // 
+
             // labelUsuario
-            // 
             labelUsuario.AutoSize = true;
-            labelUsuario.ForeColor = Color.White;
-            labelUsuario.Font = new Font("Segoe UI", 8F);
-            labelUsuario.Location = new Point(190, 3);
+            labelUsuario.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            labelUsuario.ForeColor = Color.FromArgb(180, 230, 225);
+            labelUsuario.Location = new Point(226, 12);
             labelUsuario.Name = "labelUsuario";
-            labelUsuario.Size = new Size(46, 13);
-            labelUsuario.TabIndex = 7;
-            labelUsuario.Text = "Nombre";
-            // 
+            labelUsuario.Text = "NOMBRE";
+
             // txtUsuario
-            // 
-            txtUsuario.BackColor = Color.FromArgb(0, 137, 123);
+            txtUsuario.BackColor = ClaroComboBg;
             txtUsuario.BorderStyle = BorderStyle.FixedSingle;
             txtUsuario.ForeColor = Color.White;
-            txtUsuario.Font = new Font("Segoe UI", 9F);
-            txtUsuario.Location = new Point(190, 18);
+            txtUsuario.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            txtUsuario.Location = new Point(226, 32);
             txtUsuario.Name = "txtUsuario";
             txtUsuario.PlaceholderText = "Tu nombre";
-            txtUsuario.Size = new Size(120, 23);
+            txtUsuario.Size = new Size(162, 26);
             txtUsuario.TabIndex = 5;
-            // 
-            // panelChat
-            // 
-            panelChat.BackColor = Color.FromArgb(229, 221, 212);
+
+            // ══════════════════════════════════════════════════
+            //  PANEL CHAT
+            // ══════════════════════════════════════════════════
+            panelChat.BackColor = ClaroChat;
             panelChat.Controls.Add(scrollChat);
             panelChat.Dock = DockStyle.Fill;
-            panelChat.Location = new Point(0, 55);
+            panelChat.Location = new Point(0, 72);
             panelChat.Name = "panelChat";
-            panelChat.Padding = new Padding(0);
-            panelChat.Size = new Size(600, 380);
+            panelChat.Size = new Size(620, 380);
             panelChat.TabIndex = 1;
-            // 
-            // scrollChat
-            // 
+
             scrollChat.AutoScroll = true;
-            scrollChat.BackColor = Color.FromArgb(229, 221, 212);
+            scrollChat.BackColor = ClaroChat;
             scrollChat.Dock = DockStyle.Fill;
             scrollChat.Name = "scrollChat";
-            scrollChat.Padding = new Padding(10, 8, 10, 8);
-            scrollChat.Size = new Size(600, 380);
+            scrollChat.Padding = new Padding(12, 10, 12, 10);
             scrollChat.AutoScrollMinSize = new Size(0, 0);
-            // 
-            // flowChat
-            // 
+
             flowChat.Name = "flowChat";
             flowChat.Visible = false;
-            // 
-            // rchConversacion
-            // 
             rchConversacion.Visible = false;
             rchConversacion.Name = "rchConversacion";
-            // 
-            // panelInput
-            // 
-            panelInput.BackColor = Color.FromArgb(245, 245, 245);
+
+            // ══════════════════════════════════════════════════
+            //  PANEL INPUT
+            // ══════════════════════════════════════════════════
+            panelInput.BackColor = ClaroInput;
             panelInput.Controls.Add(txtMensaje);
             panelInput.Controls.Add(btnEnviaMensaje);
             panelInput.Dock = DockStyle.Bottom;
-            panelInput.Location = new Point(0, 435);
             panelInput.Name = "panelInput";
-            panelInput.Padding = new Padding(10, 8, 10, 8);
-            panelInput.Size = new Size(600, 50);
+            panelInput.Padding = new Padding(12, 9, 12, 9);
+            panelInput.Size = new Size(620, 56);
             panelInput.TabIndex = 2;
-            // 
-            // txtMensaje
-            // 
-            txtMensaje.BackColor = Color.White;
+
+            txtMensaje.BackColor = ClaroTxtBg;
             txtMensaje.BorderStyle = BorderStyle.FixedSingle;
             txtMensaje.Dock = DockStyle.Fill;
             txtMensaje.Font = new Font("Segoe UI", 10F);
-            txtMensaje.ForeColor = Color.FromArgb(50, 50, 50);
-            txtMensaje.Location = new Point(10, 8);
+            txtMensaje.ForeColor = ClaroTxtFg;
             txtMensaje.Multiline = true;
             txtMensaje.Name = "txtMensaje";
             txtMensaje.Padding = new Padding(8, 6, 8, 6);
             txtMensaje.PlaceholderText = "Escribe un mensaje...";
-            txtMensaje.Size = new Size(460, 34);
+            txtMensaje.Size = new Size(460, 38);
             txtMensaje.TabIndex = 0;
             txtMensaje.KeyPress += txtMensaje_KeyPress;
-            // 
-            // btnEnviaMensaje
-            // 
-            btnEnviaMensaje.BackColor = Color.FromArgb(0, 150, 136);
+
+            // Botón Enviar — solo texto, sin Paint redundante
+            btnEnviaMensaje.BackColor = ClaroEnviarBtn;
             btnEnviaMensaje.Dock = DockStyle.Right;
             btnEnviaMensaje.FlatStyle = FlatStyle.Flat;
             btnEnviaMensaje.FlatAppearance.BorderSize = 0;
-            btnEnviaMensaje.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnEnviaMensaje.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 180, 160);
+            btnEnviaMensaje.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             btnEnviaMensaje.ForeColor = Color.White;
-            btnEnviaMensaje.Location = new Point(470, 8);
             btnEnviaMensaje.Name = "btnEnviaMensaje";
-            btnEnviaMensaje.Size = new Size(120, 34);
+            btnEnviaMensaje.Size = new Size(120, 38);
             btnEnviaMensaje.TabIndex = 1;
-            btnEnviaMensaje.Text = "Enviar";
+            btnEnviaMensaje.Text = "Enviar ➤";
+            btnEnviaMensaje.TextAlign = ContentAlignment.MiddleCenter;
             btnEnviaMensaje.UseVisualStyleBackColor = false;
             btnEnviaMensaje.Cursor = Cursors.Hand;
             btnEnviaMensaje.Click += btnEnviaMensaje_Click;
-            // 
-            // gbArchivos
-            // 
-            gbArchivos.BackColor = Color.FromArgb(245, 245, 245);
+
+            // ══════════════════════════════════════════════════
+            //  GROUP BOX ARCHIVOS
+            // ══════════════════════════════════════════════════
+            gbArchivos.BackColor = ClaroArchivos;
             gbArchivos.Controls.Add(pbRecepcionArchivo);
+            gbArchivos.Controls.Add(pnlProgreso);
+            gbArchivos.Controls.Add(lblPorcentaje);
             gbArchivos.Controls.Add(lblEstadoRecepcion);
             gbArchivos.Controls.Add(btnEnviarArchivos);
             gbArchivos.Controls.Add(lvArchivosSeleccionados);
@@ -253,162 +236,238 @@
             gbArchivos.Dock = DockStyle.Bottom;
             gbArchivos.FlatStyle = FlatStyle.Flat;
             gbArchivos.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
-            gbArchivos.ForeColor = Color.FromArgb(50, 50, 50);
-            gbArchivos.Location = new Point(0, 485);
+            gbArchivos.ForeColor = ClaroGbFg;
             gbArchivos.Name = "gbArchivos";
-            gbArchivos.Padding = new Padding(12, 6, 12, 10);
-            gbArchivos.Size = new Size(600, 175);
+            gbArchivos.Padding = new Padding(12, 8, 12, 10);
+            gbArchivos.Size = new Size(620, 180);
             gbArchivos.TabIndex = 10;
             gbArchivos.TabStop = false;
-            gbArchivos.Text = "Transferencia de Archivos";
-            // 
-            // btnSeleccionarArchivos
-            // 
+            gbArchivos.Text = "  📁  Transferencia de Archivos";
+
+            // ── btnSeleccionarArchivos ─────────────────────────
             btnSeleccionarArchivos.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSeleccionarArchivos.BackColor = Color.FromArgb(33, 150, 243);
             btnSeleccionarArchivos.FlatStyle = FlatStyle.Flat;
             btnSeleccionarArchivos.FlatAppearance.BorderSize = 0;
-            btnSeleccionarArchivos.Font = new Font("Segoe UI", 7F, FontStyle.Bold);
+            btnSeleccionarArchivos.FlatAppearance.MouseOverBackColor = Color.FromArgb(66, 165, 245);
+            btnSeleccionarArchivos.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
             btnSeleccionarArchivos.ForeColor = Color.White;
-            btnSeleccionarArchivos.Location = new Point(470, 20);
+            btnSeleccionarArchivos.Location = new Point(488, 20);
             btnSeleccionarArchivos.Name = "btnSeleccionarArchivos";
-            btnSeleccionarArchivos.Size = new Size(118, 26);
+            btnSeleccionarArchivos.Size = new Size(118, 30);
             btnSeleccionarArchivos.TabIndex = 0;
-            btnSeleccionarArchivos.Text = "SELECCIONAR...";
+            btnSeleccionarArchivos.Text = "    Seleccionar";
             btnSeleccionarArchivos.UseVisualStyleBackColor = false;
             btnSeleccionarArchivos.Cursor = Cursors.Hand;
             btnSeleccionarArchivos.Click += btnSeleccionarArchivos_Click;
-            // 
-            // lvArchivosSeleccionados
-            // 
+            btnSeleccionarArchivos.Paint += (s, e) =>
+            {
+                var btn = (Button)s!;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                int x = 10, y = btn.Height / 2 - 7;
+                Point[] arrow = {
+                    new Point(x,      y),
+                    new Point(x,      y + 14),
+                    new Point(x + 4,  y + 10),
+                    new Point(x + 7,  y + 15),
+                    new Point(x + 9,  y + 14),
+                    new Point(x + 6,  y + 9),
+                    new Point(x + 11, y + 9)
+                };
+                using var brush = new SolidBrush(Color.White);
+                e.Graphics.FillPolygon(brush, arrow);
+            };
+
+            // ── lvArchivosSeleccionados ────────────────────────
             lvArchivosSeleccionados.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            lvArchivosSeleccionados.BackColor = Color.White;
+            lvArchivosSeleccionados.BackColor = ClaroLvBg;
             lvArchivosSeleccionados.BorderStyle = BorderStyle.FixedSingle;
-            lvArchivosSeleccionados.Font = new Font("Segoe UI", 8F);
-            lvArchivosSeleccionados.ForeColor = Color.FromArgb(50, 50, 50);
+            lvArchivosSeleccionados.Font = new Font("Consolas", 8.5F);
+            lvArchivosSeleccionados.ForeColor = ClaroLvFg;
             lvArchivosSeleccionados.Location = new Point(12, 20);
             lvArchivosSeleccionados.Name = "lvArchivosSeleccionados";
-            lvArchivosSeleccionados.Size = new Size(448, 65);
+            lvArchivosSeleccionados.Size = new Size(466, 66);
             lvArchivosSeleccionados.TabIndex = 1;
             lvArchivosSeleccionados.UseCompatibleStateImageBehavior = false;
             lvArchivosSeleccionados.View = View.Details;
             lvArchivosSeleccionados.FullRowSelect = true;
-            // 
-            // btnEnviarArchivos
-            // 
+
+            // ── btnEnviarArchivos ──────────────────────────────
             btnEnviarArchivos.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnEnviarArchivos.BackColor = Color.FromArgb(76, 175, 80);
+            btnEnviarArchivos.BackColor = Color.FromArgb(67, 160, 71);
             btnEnviarArchivos.FlatStyle = FlatStyle.Flat;
             btnEnviarArchivos.FlatAppearance.BorderSize = 0;
-            btnEnviarArchivos.Font = new Font("Segoe UI", 7F, FontStyle.Bold);
+            btnEnviarArchivos.FlatAppearance.MouseOverBackColor = Color.FromArgb(102, 187, 106);
+            btnEnviarArchivos.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
             btnEnviarArchivos.ForeColor = Color.White;
-            btnEnviarArchivos.Location = new Point(470, 50);
+            btnEnviarArchivos.Location = new Point(488, 54);
             btnEnviarArchivos.Name = "btnEnviarArchivos";
-            btnEnviarArchivos.Size = new Size(118, 26);
+            btnEnviarArchivos.Size = new Size(118, 30);
             btnEnviarArchivos.TabIndex = 2;
-            btnEnviarArchivos.Text = "ENVIAR ARCHIVOS";
+            btnEnviarArchivos.Text = "    Enviar arch.";
             btnEnviarArchivos.UseVisualStyleBackColor = false;
             btnEnviarArchivos.Cursor = Cursors.Hand;
             btnEnviarArchivos.Click += btnEnviarArchivos_Click;
-            // 
+            btnEnviarArchivos.Paint += (s, e) =>
+            {
+                var btn = (Button)s!;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                int x = 10, cy = btn.Height / 2;
+                Point[] up = {
+                    new Point(x + 4, cy - 6),
+                    new Point(x + 8, cy - 1),
+                    new Point(x + 6, cy - 1),
+                    new Point(x + 6, cy + 5),
+                    new Point(x + 2, cy + 5),
+                    new Point(x + 2, cy - 1),
+                    new Point(x,     cy - 1)
+                };
+                using var brush = new SolidBrush(Color.White);
+                e.Graphics.FillPolygon(brush, up);
+            };
+
             // lblEstadoRecepcion
-            // 
             lblEstadoRecepcion.AutoSize = true;
-            lblEstadoRecepcion.Font = new Font("Segoe UI", 7F);
-            lblEstadoRecepcion.ForeColor = Color.FromArgb(100, 100, 100);
+            lblEstadoRecepcion.Font = new Font("Segoe UI", 7.5F);
+            lblEstadoRecepcion.ForeColor = ClaroLabelFg;
             lblEstadoRecepcion.Location = new Point(12, 93);
             lblEstadoRecepcion.Name = "lblEstadoRecepcion";
-            lblEstadoRecepcion.Size = new Size(105, 12);
-            lblEstadoRecepcion.TabIndex = 5;
             lblEstadoRecepcion.Text = "Recepción: esperando...";
-            // 
-            // pbRecepcionArchivo
-            // 
+
+            // pbRecepcionArchivo — panel con Paint custom (barra pill redondeada + porcentaje)
+            // ── LAYOUT ZONA RECEPCIÓN ─────────────────────────
+            // Área útil del GroupBox: 596px (620 - 12pad - 12pad)
+            // Columna izquierda (estado + barra + manual): X=12..466
+            // Columna derecha (botones 118px): X=490..608
+            // Fila 1 – ListView:          Y=20, H=66  → bottom=86
+            // Fila 2 – lblEstado:         Y=93
+            // Fila 3 – barra + pct:       Y=108, H=18 → bottom=126
+            // Fila 4 – manual inputs:     Y=138, H=22 → bottom=160
+            // GroupBox total H = 178 (12pad-top + 160 + 6pad-bot)
+
             pbRecepcionArchivo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pbRecepcionArchivo.BackColor = Color.FromArgb(210, 215, 213);
+            pbRecepcionArchivo.ForeColor = ClaroEnviarBtn;
             pbRecepcionArchivo.Location = new Point(12, 108);
             pbRecepcionArchivo.Name = "pbRecepcionArchivo";
-            pbRecepcionArchivo.Size = new Size(576, 14);
+            pbRecepcionArchivo.Size = new Size(390, 18);
+            pbRecepcionArchivo.Style = ProgressBarStyle.Continuous;
             pbRecepcionArchivo.TabIndex = 6;
-            // 
-            // lblArchivoRecepcion
-            // 
+            // Ocultamos el ProgressBar estándar; usamos pnlProgreso pintado a mano
+            pbRecepcionArchivo.Visible = false;
+
+            // pnlProgreso — 390px de ancho, deja 76px libres antes de los botones
+            // Anchor: Left+Top (NO Right) para que no se extienda bajo los botones
+            pnlProgreso.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            pnlProgreso.Location = new Point(12, 108);
+            pnlProgreso.Name = "pnlProgreso";
+            pnlProgreso.Size = new Size(390, 18);
+            pnlProgreso.TabIndex = 20;
+            pnlProgreso.BackColor = Color.Transparent;
+            pnlProgreso.Tag = (int)0;  // porcentaje 0–100
+
+            // lblPorcentaje — pegado a la derecha de la barra, centrado verticalmente
+            lblPorcentaje.AutoSize = false;
+            lblPorcentaje.Size = new Size(42, 18);
+            lblPorcentaje.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            lblPorcentaje.ForeColor = ClaroLabelFg;
+            lblPorcentaje.Location = new Point(406, 108);   // 12 + 390 + 4 = 406
+            lblPorcentaje.TextAlign = ContentAlignment.MiddleLeft;
+            lblPorcentaje.Name = "lblPorcentaje";
+            lblPorcentaje.Text = "0%";
+            lblPorcentaje.TabIndex = 21;
+
+            // lblArchivoRecepcion — fila manual (Y=138)
             lblArchivoRecepcion.AutoSize = true;
-            lblArchivoRecepcion.Font = new Font("Segoe UI", 7F);
-            lblArchivoRecepcion.ForeColor = Color.FromArgb(100, 100, 100);
-            lblArchivoRecepcion.Location = new Point(12, 128);
+            lblArchivoRecepcion.Font = new Font("Segoe UI", 7.5F);
+            lblArchivoRecepcion.ForeColor = ClaroLabelFg;
+            lblArchivoRecepcion.Location = new Point(12, 141);
             lblArchivoRecepcion.Name = "lblArchivoRecepcion";
-            lblArchivoRecepcion.Size = new Size(90, 12);
-            lblArchivoRecepcion.TabIndex = 8;
             lblArchivoRecepcion.Text = "Recepción manual:";
-            // 
+
             // txtArchivoRecepcion
-            // 
-            txtArchivoRecepcion.BackColor = Color.White;
+            txtArchivoRecepcion.BackColor = ClaroTxtBg;
             txtArchivoRecepcion.BorderStyle = BorderStyle.FixedSingle;
-            txtArchivoRecepcion.Font = new Font("Segoe UI", 8F);
-            txtArchivoRecepcion.ForeColor = Color.FromArgb(50, 50, 50);
-            txtArchivoRecepcion.Location = new Point(108, 125);
+            txtArchivoRecepcion.Font = new Font("Consolas", 8.5F);
+            txtArchivoRecepcion.ForeColor = ClaroTxtFg;
+            txtArchivoRecepcion.Location = new Point(114, 138);
             txtArchivoRecepcion.Name = "txtArchivoRecepcion";
             txtArchivoRecepcion.PlaceholderText = "nombre archivo";
-            txtArchivoRecepcion.Size = new Size(160, 22);
+            txtArchivoRecepcion.Size = new Size(158, 22);
             txtArchivoRecepcion.TabIndex = 9;
-            // 
+
             // txtTamanoArchivo
-            // 
-            txtTamanoArchivo.BackColor = Color.White;
+            txtTamanoArchivo.BackColor = ClaroTxtBg;
             txtTamanoArchivo.BorderStyle = BorderStyle.FixedSingle;
-            txtTamanoArchivo.Font = new Font("Segoe UI", 8F);
-            txtTamanoArchivo.ForeColor = Color.FromArgb(50, 50, 50);
-            txtTamanoArchivo.Location = new Point(275, 125);
+            txtTamanoArchivo.Font = new Font("Consolas", 8.5F);
+            txtTamanoArchivo.ForeColor = ClaroTxtFg;
+            txtTamanoArchivo.Location = new Point(280, 138);
             txtTamanoArchivo.Name = "txtTamanoArchivo";
             txtTamanoArchivo.PlaceholderText = "tamaño";
-            txtTamanoArchivo.Size = new Size(90, 22);
+            txtTamanoArchivo.Size = new Size(88, 22);
             txtTamanoArchivo.TabIndex = 10;
-            // 
+
             // labelBytes
-            // 
             labelBytes.AutoSize = true;
-            labelBytes.Font = new Font("Segoe UI", 7F);
-            labelBytes.ForeColor = Color.FromArgb(100, 100, 100);
-            labelBytes.Location = new Point(370, 128);
+            labelBytes.Font = new Font("Segoe UI", 7.5F);
+            labelBytes.ForeColor = ClaroLabelFg;
+            labelBytes.Location = new Point(372, 141);
             labelBytes.Name = "labelBytes";
-            labelBytes.Size = new Size(28, 12);
-            labelBytes.TabIndex = 11;
             labelBytes.Text = "bytes";
-            // 
-            // btnCrearArchivo
-            // 
+
+            // ── btnCrearArchivo — alineado con la fila manual ──
             btnCrearArchivo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnCrearArchivo.BackColor = Color.FromArgb(255, 152, 0);
+            btnCrearArchivo.BackColor = Color.FromArgb(239, 108, 0);
             btnCrearArchivo.FlatStyle = FlatStyle.Flat;
             btnCrearArchivo.FlatAppearance.BorderSize = 0;
-            btnCrearArchivo.Font = new Font("Segoe UI", 7F, FontStyle.Bold);
+            btnCrearArchivo.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 143, 0);
+            btnCrearArchivo.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
             btnCrearArchivo.ForeColor = Color.White;
-            btnCrearArchivo.Location = new Point(470, 124);
+            btnCrearArchivo.Location = new Point(490, 134);
             btnCrearArchivo.Name = "btnCrearArchivo";
-            btnCrearArchivo.Size = new Size(118, 24);
+            btnCrearArchivo.Size = new Size(118, 30);
             btnCrearArchivo.TabIndex = 12;
-            btnCrearArchivo.Text = "CREAR ARCHIVO";
+            btnCrearArchivo.Text = "    Crear arch.";
             btnCrearArchivo.UseVisualStyleBackColor = false;
             btnCrearArchivo.Cursor = Cursors.Hand;
             btnCrearArchivo.Click += btnCrearArchivo_Click;
-            // 
-            // Form1
-            // 
+            btnCrearArchivo.Paint += (s, e) =>
+            {
+                var btn = (Button)s!;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                int x = 8, y = btn.Height / 2 - 6;
+                using var brush = new SolidBrush(Color.White);
+                e.Graphics.FillRectangle(brush, x, y + 4, 14, 10);
+                Point[] tab = {
+                    new Point(x,     y + 4),
+                    new Point(x,     y + 2),
+                    new Point(x + 5, y + 2),
+                    new Point(x + 7, y + 4)
+                };
+                e.Graphics.FillPolygon(brush, tab);
+                using var pen = new Pen(Color.FromArgb(239, 108, 0), 2f);
+                e.Graphics.DrawLine(pen, x + 7, y + 7, x + 7, y + 11);
+                e.Graphics.DrawLine(pen, x + 5, y + 9, x + 9, y + 9);
+            };
+
+            // ══════════════════════════════════════════════════
+            //  FORM
+            // ══════════════════════════════════════════════════
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            BackColor = Color.FromArgb(229, 221, 212);
-            ClientSize = new Size(600, 660);
-            MinimumSize = new Size(600, 550);
+            BackColor = ClaroChat;
+            ClientSize = new Size(620, 680);
+            MinimumSize = new Size(620, 560);
             Controls.Add(panelChat);
             Controls.Add(panelInput);
             Controls.Add(gbArchivos);
             Controls.Add(panelHeader);
             Font = new Font("Segoe UI", 9F);
-            ForeColor = Color.FromArgb(50, 50, 50);
+            ForeColor = ClaroTxtFg;
             Name = "Form1";
             Text = "SRChat";
             Load += Form1_Load;
+
             gbArchivos.ResumeLayout(false);
             gbArchivos.PerformLayout();
             panelHeader.ResumeLayout(false);
@@ -424,14 +483,16 @@
             PerformLayout();
         }
 
+        #endregion
+
         private Panel panelHeader;
         private Panel panelChat;
         private Panel panelInput;
         private Panel panelConfig;
         private Panel scrollChat;
+        private Panel pnlProgreso;
+        private Label lblPorcentaje;
         private FlowLayoutPanel flowChat;
-
-        #endregion
 
         private TextBox txtMensaje;
         private Button btnEnviaMensaje;

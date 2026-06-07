@@ -24,6 +24,46 @@ namespace winProyComunicacion
         private bool PuertoSeleccionadoAutomatico = false;
         private Panel anclaScroll = new Panel();
 
+        // ── Modo oscuro ──────────────────────────────────────────────
+        private bool _modoOscuro = false;
+
+        // Colores modo claro
+        private static readonly Color ClaroHeader = Color.FromArgb(0, 150, 136);
+        private static readonly Color ClaroChat = Color.FromArgb(229, 221, 212);
+        private static readonly Color ClaroInput = Color.FromArgb(245, 245, 245);
+        private static readonly Color ClaroArchivos = Color.FromArgb(245, 245, 245);
+        private static readonly Color ClaroTxtBg = Color.White;
+        private static readonly Color ClaroTxtFg = Color.FromArgb(50, 50, 50);
+        private static readonly Color ClaroComboBg = Color.FromArgb(0, 137, 123);
+        private static readonly Color ClaroBurbPropio = Color.FromArgb(220, 248, 198);
+        private static readonly Color ClaroBurbAjeno = Color.White;
+        private static readonly Color ClaroBurbTexto = Color.FromArgb(50, 50, 50);
+        private static readonly Color ClaroEnviarBtn = Color.FromArgb(0, 150, 136);
+        private static readonly Color ClaroLvBg = Color.White;
+        private static readonly Color ClaroLvFg = Color.FromArgb(50, 50, 50);
+        private static readonly Color ClaroLabelFg = Color.FromArgb(100, 100, 100);
+        private static readonly Color ClaroGbFg = Color.FromArgb(50, 50, 50);
+
+        // Colores modo oscuro
+        private static readonly Color OscuroHeader = Color.FromArgb(31, 44, 52);
+        private static readonly Color OscuroChat = Color.FromArgb(11, 20, 26);
+        private static readonly Color OscuroInput = Color.FromArgb(31, 44, 52);
+        private static readonly Color OscuroArchivos = Color.FromArgb(17, 27, 33);
+        private static readonly Color OscuroTxtBg = Color.FromArgb(42, 57, 66);
+        private static readonly Color OscuroTxtFg = Color.FromArgb(233, 237, 239);
+        private static readonly Color OscuroComboBg = Color.FromArgb(42, 57, 66);
+        private static readonly Color OscuroBurbPropio = Color.FromArgb(0, 92, 75);
+        private static readonly Color OscuroBurbAjeno = Color.FromArgb(31, 44, 52);
+        private static readonly Color OscuroBurbTexto = Color.FromArgb(233, 237, 239);
+        private static readonly Color OscuroEnviarBtn = Color.FromArgb(0, 168, 132);
+        private static readonly Color OscuroLvBg = Color.FromArgb(31, 44, 52);
+        private static readonly Color OscuroLvFg = Color.FromArgb(233, 237, 239);
+        private static readonly Color OscuroLabelFg = Color.FromArgb(134, 150, 160);
+        private static readonly Color OscuroGbFg = Color.FromArgb(134, 150, 160);
+
+        private Button btnModo;
+        // ─────────────────────────────────────────────────────────────
+
         public Form1()
         {
             InitializeComponent();
@@ -35,6 +75,7 @@ namespace winProyComunicacion
             lvArchivosSeleccionados.Columns.Add("Tamaño (bytes)", 80);
             lvArchivosSeleccionados.Columns.Add("Progreso", 70);
 
+            AgregarBotonModo();
             AplicarBotonesRedondeados();
 
             anclaScroll.Size = new Size(1, 1);
@@ -49,6 +90,90 @@ namespace winProyComunicacion
                 IrAlUltimoMensaje();
             };
             scrollChat.Click += (s, e) => txtMensaje.Focus();
+        }
+
+        private void AgregarBotonModo()
+        {
+            btnModo = new Button();
+            btnModo.Text = "🌙";
+            btnModo.Font = new Font("Segoe UI", 14F);
+            btnModo.FlatStyle = FlatStyle.Flat;
+            btnModo.FlatAppearance.BorderSize = 0;
+            btnModo.BackColor = Color.Transparent;
+            btnModo.ForeColor = Color.White;
+            btnModo.Size = new Size(40, 36);
+            btnModo.Cursor = Cursors.Hand;
+            btnModo.Location = new Point(12, 10);
+            btnModo.Click += BtnModo_Click;
+            panelHeader.Controls.Add(btnModo);
+            btnModo.BringToFront();
+
+            labelTitulo.Location = new Point(56, 10);
+        }
+
+        private void BtnModo_Click(object sender, EventArgs e)
+        {
+            _modoOscuro = !_modoOscuro;
+            btnModo.Text = _modoOscuro ? "☀️" : "🌙";
+            AplicarTema();
+        }
+
+        private void AplicarTema()
+        {
+            bool d = _modoOscuro;
+
+            panelHeader.BackColor = d ? OscuroHeader : ClaroHeader;
+            cbCOM.BackColor = d ? OscuroComboBg : ClaroComboBg;
+            cbVelocidad.BackColor = d ? OscuroComboBg : ClaroComboBg;
+            txtUsuario.BackColor = d ? OscuroComboBg : ClaroComboBg;
+
+            panelChat.BackColor = d ? OscuroChat : ClaroChat;
+            scrollChat.BackColor = d ? OscuroChat : ClaroChat;
+
+            panelInput.BackColor = d ? OscuroInput : ClaroInput;
+            txtMensaje.BackColor = d ? OscuroTxtBg : ClaroTxtBg;
+            txtMensaje.ForeColor = d ? OscuroTxtFg : ClaroTxtFg;
+            btnEnviaMensaje.BackColor = d ? OscuroEnviarBtn : ClaroEnviarBtn;
+
+            gbArchivos.BackColor = d ? OscuroArchivos : ClaroArchivos;
+            gbArchivos.ForeColor = d ? OscuroGbFg : ClaroGbFg;
+            lvArchivosSeleccionados.BackColor = d ? OscuroLvBg : ClaroLvBg;
+            lvArchivosSeleccionados.ForeColor = d ? OscuroLvFg : ClaroLvFg;
+            txtArchivoRecepcion.BackColor = d ? OscuroTxtBg : ClaroTxtBg;
+            txtArchivoRecepcion.ForeColor = d ? OscuroTxtFg : ClaroTxtFg;
+            txtTamanoArchivo.BackColor = d ? OscuroTxtBg : ClaroTxtBg;
+            txtTamanoArchivo.ForeColor = d ? OscuroTxtFg : ClaroTxtFg;
+            lblEstadoRecepcion.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
+            labelBytes.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
+            lblArchivoRecepcion.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
+            pbRecepcionArchivo.BackColor = d ? OscuroInput : ClaroTxtBg;
+
+            ActualizarColorBurbujas();
+        }
+
+        private void ActualizarColorBurbujas()
+        {
+            bool d = _modoOscuro;
+            foreach (Control c in scrollChat.Controls)
+            {
+                if (c is Panel contenedor && contenedor.Tag is bool esPropio)
+                {
+                    foreach (Control hijo in contenedor.Controls)
+                    {
+                        if (hijo is Label lbl)
+                        {
+                            lbl.BackColor = esPropio
+                                ? (d ? OscuroBurbPropio : ClaroBurbPropio)
+                                : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
+                            lbl.ForeColor = d ? OscuroBurbTexto : ClaroBurbTexto;
+                        }
+                        else if (hijo is Panel cola && cola.Name.StartsWith("cola_"))
+                        {
+                            cola.Invalidate();
+                        }
+                    }
+                }
+            }
         }
 
         private void AplicarBotonesRedondeados()
@@ -133,9 +258,7 @@ namespace winProyComunicacion
             var usuario = txtUsuario.Text.Trim();
             var mensaje = txtMensaje.Text.Trim();
             if (string.IsNullOrWhiteSpace(mensaje))
-            {
                 return;
-            }
 
             Enlace.NombreUsuario = usuario;
             Enlace.EnviarMensaje($"{usuario}|{mensaje}");
@@ -159,17 +282,20 @@ namespace winProyComunicacion
 
         private void AgregarMensajeFormateado(string usuario, string mensaje, bool esPropio)
         {
+            bool d = _modoOscuro;
             int anchoDisponible = scrollChat.ClientSize.Width - scrollChat.Padding.Horizontal;
             int anchoMax = (int)(anchoDisponible * 0.65);
 
             Label burbuja = new Label();
             burbuja.Text = mensaje;
             burbuja.Font = new Font("Segoe UI", 10F);
-            burbuja.ForeColor = Color.FromArgb(50, 50, 50);
+            burbuja.ForeColor = d ? OscuroBurbTexto : ClaroBurbTexto;
             burbuja.AutoSize = true;
             burbuja.MaximumSize = new Size(anchoMax, 0);
             burbuja.Padding = new Padding(12, 8, 12, 8);
-            burbuja.BackColor = esPropio ? Color.FromArgb(220, 248, 198) : Color.White;
+            burbuja.BackColor = esPropio
+                ? (d ? OscuroBurbPropio : ClaroBurbPropio)
+                : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
             burbuja.Tag = esPropio;
 
             Panel contenedor = new Panel();
@@ -194,8 +320,11 @@ namespace winProyComunicacion
 
         private void DibujarCola(Graphics g, Rectangle rect, bool esPropio)
         {
+            bool d = _modoOscuro;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            Color color = esPropio ? Color.FromArgb(220, 248, 198) : Color.White;
+            Color color = esPropio
+                ? (d ? OscuroBurbPropio : ClaroBurbPropio)
+                : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
             using SolidBrush brush = new SolidBrush(color);
 
             Point[] puntos;
@@ -296,9 +425,7 @@ namespace winProyComunicacion
         {
             var partes = mensaje.Split('|', 2, StringSplitOptions.TrimEntries);
             if (partes.Length == 2 && !string.IsNullOrWhiteSpace(partes[0]))
-            {
                 return (partes[0], partes[1]);
-            }
 
             return (DefaultRemoteUser, mensaje);
         }
@@ -355,14 +482,10 @@ namespace winProyComunicacion
         {
             cbVelocidad.Items.Clear();
             foreach (var velocidad in VelocidadesSoportadas)
-            {
                 cbVelocidad.Items.Add(velocidad.ToString());
-            }
 
             if (cbVelocidad.Items.Count > 0)
-            {
                 cbVelocidad.SelectedItem = "115200";
-            }
         }
 
         private void cbCOM_SelectedIndexChanged(object sender, EventArgs e)
@@ -386,62 +509,52 @@ namespace winProyComunicacion
         private void ActualizarConfiguracionPuerto()
         {
             if (!PuedeConfigurarPuerto())
-            {
                 return;
-            }
 
             var nombrePuerto = cbCOM.SelectedItem?.ToString() ?? "";
 
             if (!int.TryParse(cbVelocidad.SelectedItem?.ToString(), out var velocidad))
-            {
                 return;
-            }
 
             Enlace.InicializaPuerto(nombrePuerto, velocidad);
         }
 
-        private bool PuedeConfigurarPuerto()
-        {
-            return cbCOM.SelectedItem is not null && cbVelocidad.SelectedItem is not null;
-        }
+        private bool PuedeConfigurarPuerto() =>
+            cbCOM.SelectedItem is not null && cbVelocidad.SelectedItem is not null;
 
-        private bool PuedeEnviar()
-        {
-            return !string.IsNullOrWhiteSpace(txtUsuario.Text)
-                && cbCOM.SelectedItem is not null
-                && cbVelocidad.SelectedItem is not null;
-        }
+        private bool PuedeEnviar() =>
+            !string.IsNullOrWhiteSpace(txtUsuario.Text)
+            && cbCOM.SelectedItem is not null
+            && cbVelocidad.SelectedItem is not null;
 
         private void btnSeleccionarArchivos_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog dialogo = new OpenFileDialog())
+            using OpenFileDialog dialogo = new OpenFileDialog
             {
-                dialogo.Multiselect = true;
-                dialogo.Title = "Seleccionar archivos para enviar";
-                dialogo.Filter = "Todos los archivos (*.*)|*.*";
+                Multiselect = true,
+                Title = "Seleccionar archivos para enviar",
+                Filter = "Todos los archivos (*.*)|*.*"
+            };
 
-                if (dialogo.ShowDialog() == DialogResult.OK && dialogo.FileNames.Length > 0)
+            if (dialogo.ShowDialog() == DialogResult.OK && dialogo.FileNames.Length > 0)
+            {
+                if (dialogo.FileNames.Length > 5)
+                    MessageBox.Show("Máximo 5 archivos simultáneos. Se enviarán los primeros 5.");
+
+                lvArchivosSeleccionados.Items.Clear();
+
+                int limite = Math.Min(dialogo.FileNames.Length, 5);
+                for (int i = 0; i < limite; i++)
                 {
-                    if (dialogo.FileNames.Length > 5)
-                    {
-                        MessageBox.Show("Máximo 5 archivos simultáneos. Se enviarán los primeros 5.");
-                    }
+                    string ruta = dialogo.FileNames[i];
+                    string nombre = Path.GetFileName(ruta);
+                    long tamano = new FileInfo(ruta).Length;
 
-                    lvArchivosSeleccionados.Items.Clear();
-
-                    int limite = Math.Min(dialogo.FileNames.Length, 5);
-                    for (int i = 0; i < limite; i++)
-                    {
-                        string ruta = dialogo.FileNames[i];
-                        string nombre = Path.GetFileName(ruta);
-                        long tamano = new FileInfo(ruta).Length;
-
-                        ListViewItem item = new ListViewItem(nombre);
-                        item.SubItems.Add(tamano.ToString());
-                        item.SubItems.Add("0%");
-                        item.Tag = ruta;
-                        lvArchivosSeleccionados.Items.Add(item);
-                    }
+                    ListViewItem item = new ListViewItem(nombre);
+                    item.SubItems.Add(tamano.ToString());
+                    item.SubItems.Add("0%");
+                    item.Tag = ruta;
+                    lvArchivosSeleccionados.Items.Add(item);
                 }
             }
         }
@@ -462,14 +575,10 @@ namespace winProyComunicacion
 
             string[] rutas = new string[lvArchivosSeleccionados.Items.Count];
             for (int i = 0; i < lvArchivosSeleccionados.Items.Count; i++)
-            {
                 rutas[i] = lvArchivosSeleccionados.Items[i].Tag as string;
-            }
 
             foreach (ListViewItem item in lvArchivosSeleccionados.Items)
-            {
                 item.SubItems[2].Text = "pendiente";
-            }
 
             Enlace.NombreUsuario = txtUsuario.Text.Trim();
             Enlace.EnviarArchivos(rutas);
@@ -499,7 +608,7 @@ namespace winProyComunicacion
 
         private void Enlace_ProgresoEnvio(string nombreArchivo, long enviado, long total)
         {
-            Invoke(MuestraProgresoArchivo, nombreArchivo, enviado, total);
+            BeginInvoke(MuestraProgresoArchivo, nombreArchivo, enviado, total);
         }
 
         private void ActualizandoProgresoArchivo(string nombreArchivo, long enviado, long total)
@@ -517,14 +626,16 @@ namespace winProyComunicacion
 
         private void Enlace_ArchivoEnvioCompletado(string nombreArchivo)
         {
-            Invoke(() =>
+            BeginInvoke(() =>
             {
                 foreach (ListViewItem item in lvArchivosSeleccionados.Items)
                 {
                     if (item.Text == nombreArchivo)
                     {
                         item.SubItems[2].Text = "COMPLETADO";
-                        item.BackColor = Color.LightGreen;
+                        item.BackColor = _modoOscuro
+                            ? Color.FromArgb(0, 92, 75)
+                            : Color.LightGreen;
                         break;
                     }
                 }
@@ -533,7 +644,7 @@ namespace winProyComunicacion
 
         private void Enlace_MetadatosRecibidos(string nombreArchivo, long tamano)
         {
-            Invoke(() =>
+            BeginInvoke(() =>
             {
                 lblEstadoRecepcion.Text = "Recibiendo: " + nombreArchivo + " (" + tamano + " bytes)";
                 pbRecepcionArchivo.Value = 0;
@@ -543,7 +654,7 @@ namespace winProyComunicacion
 
         private void Enlace_ProgresoRecepcion(long recibido, long total)
         {
-            Invoke(() =>
+            BeginInvoke(() =>
             {
                 if (total > 0)
                 {
@@ -553,9 +664,7 @@ namespace winProyComunicacion
                 }
 
                 if (recibido >= total && total > 0)
-                {
                     lblEstadoRecepcion.Text = "Recepción: completado ✓";
-                }
             });
         }
     }
