@@ -209,17 +209,45 @@ namespace winProyComunicacion
 
         private void btnAbrirArchivo_Click(object sender, EventArgs e)
         {
-            Enlace.AbrirArchivo(txtArchivoEnvio.Text.Trim());
+            var nombre = txtArchivoEnvio.Text.Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                MessageBox.Show("Ingrese un nombre de archivo.");
+                return;
+            }
+            Enlace.AbrirArchivo(nombre);
         }
 
         private void btnEnviarArchivo_Click(object sender, EventArgs e)
         {
+            var nombre = txtArchivoEnvio.Text.Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                MessageBox.Show("Primero abra un archivo con \"ABRIR ARCHIVO\".");
+                return;
+            }
             Enlace.inicioTransmisionArchivo1();
         }
 
         private void btnCrearArchivo_Click(object sender, EventArgs e)
         {
-            Enlace.CrearArchivo(txtArchivoEnvio.Text.Trim(), Convert.ToInt64(txtTamanoArchivo.Text));
+            var nombre = txtArchivoRecepcion.Text.Trim();
+            if (string.IsNullOrWhiteSpace(nombre))
+            {
+                MessageBox.Show("Ingrese un nombre de archivo a recibir.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(txtTamanoArchivo.Text))
+            {
+                MessageBox.Show("Ingrese el tamaño del archivo en bytes.");
+                return;
+            }
+            if (!long.TryParse(txtTamanoArchivo.Text, out long tamano))
+            {
+                MessageBox.Show("El tamaño debe ser un numero entero (bytes).");
+                return;
+            }
+            Enlace.CrearArchivo(nombre, tamano);
         }
     }
 }

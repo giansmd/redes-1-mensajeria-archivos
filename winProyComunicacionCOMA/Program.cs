@@ -6,7 +6,7 @@ namespace winProyComunicacion
         static void Main()
         {
             ApplicationConfiguration.Initialize();
-            Form1.PuertoPreferido = "COMA";
+            Form1.PuertoPreferido = "COM10";
             Application.Run(new Form1());
         }
     }

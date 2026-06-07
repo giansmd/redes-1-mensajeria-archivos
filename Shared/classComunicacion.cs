@@ -79,31 +79,68 @@ namespace winProyComunicacion
             }
         }
 
-        public void AbrirArchivo(string nombrecito)
+        public bool AbrirArchivo(string nombrecito)
         {
             try
             {
-                FlujoLecturaArchivo = new FileStream("E:\\REDES1\\" + nombrecito, FileMode.Open, FileAccess.Read);
+                CerrarFlujoEnvio();
+
+                FlujoLecturaArchivo = new FileStream("C:\\REDES1\\" + nombrecito, FileMode.Open, FileAccess.Read);
 
                 leyendoTramaArchivoEnvio = new BinaryReader(FlujoLecturaArchivo);
                 tamanoArchivo = FlujoLecturaArchivo.Length;
                 MessageBox.Show("SE ABRIO EL ARCHIVO Y SE CARGO PARA ENVIAR");
+                return true;
             }
             catch (Exception e)
             {
-                MessageBox.Show("Selecciona bien", e.Message.ToString());
+                FlujoLecturaArchivo = null;
+                leyendoTramaArchivoEnvio = null;
+                tamanoArchivo = 0;
+                MessageBox.Show("Error al abrir archivo", e.Message.ToString());
+                return false;
             }
         }
 
-        public void inicioTransmisionArchivo1()
+        private void CerrarFlujoEnvio()
         {
+            if (leyendoTramaArchivoEnvio != null)
+            {
+                leyendoTramaArchivoEnvio.Dispose();
+                leyendoTramaArchivoEnvio = null;
+            }
+            if (FlujoLecturaArchivo != null)
+            {
+                FlujoLecturaArchivo.Dispose();
+                FlujoLecturaArchivo = null;
+            }
+        }
+
+        public bool inicioTransmisionArchivo1()
+        {
+            if (FlujoLecturaArchivo == null || leyendoTramaArchivoEnvio == null)
+            {
+                MessageBox.Show("Primero debe abrir un archivo con \"ABRIR ARCHIVO\".");
+                return false;
+            }
+
+            if (!FlujoLecturaArchivo.CanRead)
+            {
+                MessageBox.Show("El archivo ya fue cerrado. Vuélvalo a abrir con \"ABRIR ARCHIVO\".");
+                return false;
+            }
+
             tamanoArchivo = FlujoLecturaArchivo.Length;
             procesoEnvioArchivo = new Thread(LeyendoTransmitiendoArchivo);
             procesoEnvioArchivo.Start();
+            return true;
         }
 
         public void LeyendoTransmitiendoArchivo()
         {
+            if (FlujoLecturaArchivo == null || leyendoTramaArchivoEnvio == null || !FlujoLecturaArchivo.CanRead)
+                return;
+
             long avanceEnvio = 0;
 
             while (tamanoArchivo - avanceEnvio >= 1019)
@@ -124,8 +161,7 @@ namespace winProyComunicacion
 
             avanceEnvio = avanceEnvio + Convert.ToInt16(tamanoArchivo - avanceEnvio);
 
-            leyendoTramaArchivoEnvio.Close();
-            FlujoLecturaArchivo.Close();
+            CerrarFlujoEnvio();
         }
 
         private void SPuerto_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -195,14 +231,36 @@ namespace winProyComunicacion
 
         public void CrearArchivo(string nombrecito, long TamanoArchivo)
         {
-            FlujoEscrituraArchivo = new FileStream("E:\\REDES1\\" + nombrecito, FileMode.Create, FileAccess.Write);
+            CerrarFlujoRecepcion();
+
+            FlujoEscrituraArchivo = new FileStream("C:\\REDES1\\" + nombrecito, FileMode.Create, FileAccess.Write);
             EscribiendoTramaArchivoRecepcion = new BinaryWriter(FlujoEscrituraArchivo);
             avanceRecepcionArchivo = 0;
             tamanoArchivoRecepcion = TamanoArchivo;
         }
 
+        private void CerrarFlujoRecepcion()
+        {
+            if (EscribiendoTramaArchivoRecepcion != null)
+            {
+                EscribiendoTramaArchivoRecepcion.Dispose();
+                EscribiendoTramaArchivoRecepcion = null;
+            }
+            if (FlujoEscrituraArchivo != null)
+            {
+                FlujoEscrituraArchivo.Dispose();
+                FlujoEscrituraArchivo = null;
+            }
+        }
+
         public void EscribiendoRecepcionArchivo()
         {
+            if (EscribiendoTramaArchivoRecepcion == null || FlujoEscrituraArchivo == null)
+                return;
+
+            if (avanceRecepcionArchivo >= tamanoArchivoRecepcion)
+                return;
+
             if (tamanoArchivoRecepcion - avanceRecepcionArchivo >= 1019)
             {
                 avanceRecepcionArchivo += 1019;
@@ -210,9 +268,12 @@ namespace winProyComunicacion
             }
             else
             {
-                EscribiendoTramaArchivoRecepcion.Write(tramaRecepcionMensaje, 5, Convert.ToInt16(tamanoArchivoRecepcion - avanceRecepcionArchivo));
-                EscribiendoTramaArchivoRecepcion.Close();
-                FlujoEscrituraArchivo.Close();
+                int bytesRestantes = Convert.ToInt16(tamanoArchivoRecepcion - avanceRecepcionArchivo);
+                EscribiendoTramaArchivoRecepcion.Write(tramaRecepcionMensaje, 5, bytesRestantes);
+                EscribiendoTramaArchivoRecepcion.Dispose();
+                EscribiendoTramaArchivoRecepcion = null;
+                FlujoEscrituraArchivo.Dispose();
+                FlujoEscrituraArchivo = null;
             }
         }
     }
