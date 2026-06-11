@@ -22,6 +22,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="..\Shared\classComunicacion.cs" Link="classComunicacion.cs" />
+    <Compile Include="..\Shared\EnvioArchivo.cs" Link="EnvioArchivo.cs" />
+    <Compile Include="..\Shared\ArchivoRecepcion.cs" Link="ArchivoRecepcion.cs" />
   </ItemGroup>
 
   <ItemGroup>

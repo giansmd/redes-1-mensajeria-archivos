@@ -12,6 +12,7 @@ namespace winProyComunicacion
         private static extern bool LockWindowUpdate(IntPtr hWnd);
 
         public static string? PuertoPreferido { get; set; }
+        public static string DirectorioDescarga { get; set; } = "C:\\REDES1\\";
 
         ClassComunicacion Enlace;
 
@@ -26,6 +27,7 @@ namespace winProyComunicacion
 
         // ── Modo oscuro ──────────────────────────────────────────────
         private bool _modoOscuro = false;
+        private Dictionary<int, ListViewItem> _itemsRecepcion = new Dictionary<int, ListViewItem>();
 
         // Colores modo claro
         private static readonly Color ClaroHeader = Color.FromArgb(0, 150, 136);
@@ -68,6 +70,7 @@ namespace winProyComunicacion
         {
             InitializeComponent();
             Enlace = new ClassComunicacion();
+            Enlace.DirectorioDescarga = DirectorioDescarga;
             MuestraMensajeRCH = new AccedeControl(MostrandoMensaje);
             MuestraProgresoArchivo = new AccedeControlProgreso(ActualizandoProgresoArchivo);
 
@@ -217,6 +220,8 @@ namespace winProyComunicacion
             Enlace.ArchivoEnvioCompletado += Enlace_ArchivoEnvioCompletado;
             Enlace.MetadatosRecibidos += Enlace_MetadatosRecibidos;
             Enlace.ProgresoRecepcion += Enlace_ProgresoRecepcion;
+            Enlace.MetadatosRecibidosConIndice += Enlace_MetadatosRecibidosConIndice;
+            Enlace.ProgresoRecepcionConIndice += Enlace_ProgresoRecepcionConIndice;
             CargarVelocidades();
             CargarPuertos();
 
@@ -661,6 +666,55 @@ namespace winProyComunicacion
                     int porcentaje = (int)(recibido * 100 / total);
                     if (porcentaje > 100) porcentaje = 100;
                     pbRecepcionArchivo.Value = porcentaje;
+                }
+
+                if (recibido >= total && total > 0)
+                    lblEstadoRecepcion.Text = "Recepción: completado ✓";
+            });
+        }
+
+        private void Enlace_MetadatosRecibidosConIndice(int indice, string nombreArchivo, long tamano)
+        {
+            BeginInvoke(() =>
+            {
+                lblEstadoRecepcion.Text = "Recibiendo: " + nombreArchivo + " (" + tamano + " bytes)";
+                pbRecepcionArchivo.Value = 0;
+                pbRecepcionArchivo.Maximum = 100;
+
+                ListViewItem item = new ListViewItem("← " + nombreArchivo);
+                item.SubItems.Add(tamano.ToString());
+                item.SubItems.Add("0%");
+                item.Tag = indice;
+                lvArchivosSeleccionados.Items.Add(item);
+                _itemsRecepcion[indice] = item;
+            });
+        }
+
+        private void Enlace_ProgresoRecepcionConIndice(int indice, string nombreArchivo, long recibido, long total)
+        {
+            BeginInvoke(() =>
+            {
+                if (_itemsRecepcion.TryGetValue(indice, out ListViewItem item))
+                {
+                    int porcentaje = total > 0 ? (int)(recibido * 100 / total) : 100;
+                    if (porcentaje > 100) porcentaje = 100;
+                    item.SubItems[2].Text = porcentaje + "%";
+
+                    if (recibido >= total && total > 0)
+                    {
+                        item.SubItems[2].Text = "COMPLETADO ✓";
+                        item.BackColor = _modoOscuro
+                            ? Color.FromArgb(0, 92, 75)
+                            : Color.LightGreen;
+                        _itemsRecepcion.Remove(indice);
+                    }
+                }
+
+                if (total > 0)
+                {
+                    int pct = (int)(recibido * 100 / total);
+                    if (pct > 100) pct = 100;
+                    pbRecepcionArchivo.Value = pct;
                 }
 
                 if (recibido >= total && total > 0)
