@@ -30,6 +30,8 @@ namespace winProyComunicacion
         // ── Modo oscuro ──────────────────────────────────────────────
         private bool _modoOscuro = false;
         private Dictionary<int, ListViewItem> _itemsRecepcion = new Dictionary<int, ListViewItem>();
+        private Dictionary<string, (Panel fillPanel, Label pctLabel, Panel contenedor)> _burbujasSendChat = new();
+        private Dictionary<int, (Panel fillPanel, Label pctLabel, Panel contenedor)> _burbujasRecvChat = new();
 
         // Colores modo claro
         private static readonly Color ClaroHeader = Color.FromArgb(0, 150, 136);
@@ -193,19 +195,35 @@ namespace winProyComunicacion
                         {
                             cola.Invalidate();
                         }
-                        else if (hijo is Panel burb && burb.Name.StartsWith("burb_"))
+                        else if (hijo is Panel burb && (burb.Name.StartsWith("burb_")))
                         {
                             burb.BackColor = colorFondo;
+                            Color colorTrackEnvio = d ? Color.FromArgb(0, 60, 50) : Color.FromArgb(180, 220, 190);
+                            Color colorTrackRecv = d ? Color.FromArgb(50, 65, 74) : Color.FromArgb(210, 210, 210);
+                            Color colorSubtextoEnvio = d ? Color.FromArgb(120, 150, 140) : Color.FromArgb(110, 140, 110);
+                            Color colorSubtextoRecv = d ? Color.FromArgb(120, 150, 160) : Color.FromArgb(120, 120, 120);
+                            bool esBurbEnvio = burb.Name.StartsWith("burb_send_");
+                            bool esBurbRecv = burb.Name.StartsWith("burb_recv_");
+
                             foreach (Control nieto in burb.Controls)
                             {
                                 if (nieto is Label nieto_lbl)
                                 {
                                     nieto_lbl.BackColor = colorFondo;
-                                    nieto_lbl.ForeColor = colorTexto;
+                                    bool esPctLabel = (esBurbEnvio || esBurbRecv)
+                                        && nieto_lbl.Font.Size < 8.5F;
+                                    if (esPctLabel)
+                                        nieto_lbl.ForeColor = esBurbEnvio ? colorSubtextoEnvio : colorSubtextoRecv;
+                                    else
+                                        nieto_lbl.ForeColor = colorTexto;
                                 }
                                 else if (nieto is PictureBox pb)
                                 {
                                     pb.BackColor = colorFondo;
+                                }
+                                else if (nieto is Panel track && track.Name.StartsWith("track_"))
+                                {
+                                    track.BackColor = esBurbEnvio ? colorTrackEnvio : colorTrackRecv;
                                 }
                             }
                         }
@@ -250,6 +268,8 @@ namespace winProyComunicacion
         private void Form1_Load(object sender, EventArgs e)
         {
             Enlace.LlegoMensaje += Enlace_llegoMensaje;
+            Enlace.EnvioIniciado += Enlace_EnvioIniciado;
+            Enlace.RecepcionCancelada += Enlace_RecepcionCancelada;
             Enlace.ProgresoEnvio += Enlace_ProgresoEnvio;
             Enlace.ArchivoEnvioCompletado += Enlace_ArchivoEnvioCompletado;
             Enlace.ArchivoRecibidoCompletado += Enlace_ArchivoRecibidoCompletado;
@@ -271,6 +291,35 @@ namespace winProyComunicacion
         private void Enlace_llegoMensaje(string m)
         {
             Invoke(MuestraMensajeRCH, m);
+        }
+
+        private void Enlace_EnvioIniciado(int indice, string nombre)
+        {
+            BeginInvoke(() => AgregarBurbujaProgresoEnvio(indice, nombre));
+        }
+
+        private void Enlace_RecepcionCancelada(int indice)
+        {
+            BeginInvoke(() =>
+            {
+                if (_burbujasRecvChat.TryGetValue(indice, out var burbuja))
+                {
+                    scrollChat.Controls.Remove(burbuja.contenedor);
+                    _burbujasRecvChat.Remove(indice);
+                    ReposicionarMensajes();
+                }
+
+                if (_itemsRecepcion.TryGetValue(indice, out ListViewItem item))
+                {
+                    item.SubItems[2].Text = "Cancelado";
+                    item.BackColor = _modoOscuro
+                        ? Color.FromArgb(80, 40, 40)
+                        : Color.FromArgb(255, 200, 200);
+                    _itemsRecepcion.Remove(indice);
+                }
+
+                lblEstadoRecepcion.Text = "Recepción: cancelada";
+            });
         }
 
         private void btnEnviaMensaje_Click(object sender, EventArgs e)
@@ -710,14 +759,22 @@ namespace winProyComunicacion
 
         private void ActualizandoProgresoArchivo(string nombreArchivo, long enviado, long total)
         {
+            int porcentaje = total > 0 ? (int)(enviado * 100 / total) : 100;
+            if (porcentaje > 100) porcentaje = 100;
+
             foreach (ListViewItem item in lvArchivosSeleccionados.Items)
             {
                 if (item.Text == nombreArchivo)
                 {
-                    int porcentaje = total > 0 ? (int)(enviado * 100 / total) : 100;
                     item.SubItems[2].Text = porcentaje + "%";
                     break;
                 }
+            }
+
+            if (_burbujasSendChat.TryGetValue(nombreArchivo, out var burbuja))
+            {
+                burbuja.fillPanel.Width = (int)(216 * porcentaje / 100.0);
+                burbuja.pctLabel.Text = $"{porcentaje}% · Enviando...";
             }
         }
 
@@ -737,6 +794,14 @@ namespace winProyComunicacion
                     }
                 }
                 ActualizarIndicadorArchivos();
+
+                if (_burbujasSendChat.TryGetValue(nombreArchivo, out var burbuja))
+                {
+                    scrollChat.Controls.Remove(burbuja.contenedor);
+                    _burbujasSendChat.Remove(nombreArchivo);
+                    ReposicionarMensajes();
+                }
+
                 AgregarBurbujaArchivo(txtUsuario.Text.Trim(), rutaArchivo, true);
             });
         }
@@ -786,6 +851,8 @@ namespace winProyComunicacion
                 item.Tag = indice;
                 lvArchivosSeleccionados.Items.Add(item);
                 _itemsRecepcion[indice] = item;
+
+                AgregarBurbujaProgresoRecepcion(indice, nombreArchivo, tamano);
             });
         }
 
@@ -793,10 +860,11 @@ namespace winProyComunicacion
         {
             BeginInvoke(() =>
             {
+                int porcentaje = total > 0 ? (int)(recibido * 100 / total) : 100;
+                if (porcentaje > 100) porcentaje = 100;
+
                 if (_itemsRecepcion.TryGetValue(indice, out ListViewItem item))
                 {
-                    int porcentaje = total > 0 ? (int)(recibido * 100 / total) : 100;
-                    if (porcentaje > 100) porcentaje = 100;
                     item.SubItems[2].Text = porcentaje + "%";
 
                     if (recibido >= total && total > 0)
@@ -810,15 +878,224 @@ namespace winProyComunicacion
                 }
 
                 if (total > 0)
-                {
-                    int pct = (int)(recibido * 100 / total);
-                    if (pct > 100) pct = 100;
-                    pbRecepcionArchivo.Value = pct;
-                }
+                    pbRecepcionArchivo.Value = porcentaje;
 
                 if (recibido >= total && total > 0)
                     lblEstadoRecepcion.Text = "Recepción: completado ✓";
+
+                if (_burbujasRecvChat.TryGetValue(indice, out var burbuja))
+                {
+                    burbuja.fillPanel.Width = (int)(216 * porcentaje / 100.0);
+                    burbuja.pctLabel.Text = $"{porcentaje}% · Recibiendo...";
+
+                    if (recibido >= total && total > 0)
+                    {
+                        scrollChat.Controls.Remove(burbuja.contenedor);
+                        _burbujasRecvChat.Remove(indice);
+                        ReposicionarMensajes();
+                    }
+                }
             });
+        }
+
+        private void AgregarBurbujaProgresoEnvio(int indice, string nombre)
+        {
+            bool d = _modoOscuro;
+            Color colorFondo = d ? OscuroBurbPropio : ClaroBurbPropio;
+            Color colorTexto = d ? OscuroBurbTexto : ClaroBurbTexto;
+            Color colorTrack = d ? Color.FromArgb(0, 60, 50) : Color.FromArgb(180, 220, 190);
+            Color colorSubtexto = d ? Color.FromArgb(120, 150, 140) : Color.FromArgb(110, 140, 110);
+
+            string ext = Path.GetExtension(nombre).ToLowerInvariant();
+            string icono = ext is ".mp4" or ".avi" or ".mov" or ".mkv" ? "🎬"
+                         : ext == ".pdf" ? "📄"
+                         : ext is ".docx" or ".doc" ? "📝" : "📎";
+
+            Label lblIcono = new Label();
+            lblIcono.Text = icono;
+            lblIcono.Font = new Font("Segoe UI", 16F);
+            lblIcono.Size = new Size(36, 36);
+            lblIcono.Location = new Point(8, 10);
+            lblIcono.TextAlign = ContentAlignment.MiddleCenter;
+            lblIcono.BackColor = colorFondo;
+            lblIcono.ForeColor = colorTexto;
+
+            Label lblNombre = new Label();
+            lblNombre.Text = nombre;
+            lblNombre.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblNombre.ForeColor = colorTexto;
+            lblNombre.BackColor = colorFondo;
+            lblNombre.Size = new Size(150, 34);
+            lblNombre.Location = new Point(50, 4);
+            lblNombre.AutoEllipsis = true;
+
+            Button btnCancelar = new Button();
+            btnCancelar.Text = "✕";
+            btnCancelar.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            btnCancelar.Size = new Size(22, 22);
+            btnCancelar.Location = new Point(204, 6);
+            btnCancelar.FlatStyle = FlatStyle.Flat;
+            btnCancelar.FlatAppearance.BorderSize = 0;
+            btnCancelar.BackColor = Color.FromArgb(200, 80, 80);
+            btnCancelar.ForeColor = Color.White;
+            btnCancelar.Cursor = Cursors.Hand;
+            btnCancelar.Click += (s, e) => CancelarEnvioDesdeChat(indice, nombre);
+
+            Panel pnlTrack = new Panel();
+            pnlTrack.Name = "track_s_" + indice;
+            pnlTrack.Size = new Size(216, 7);
+            pnlTrack.Location = new Point(8, 50);
+            pnlTrack.BackColor = colorTrack;
+
+            Panel pnlFill = new Panel();
+            pnlFill.Size = new Size(0, 7);
+            pnlFill.Location = new Point(0, 0);
+            pnlFill.BackColor = Color.FromArgb(0, 150, 136);
+            pnlTrack.Controls.Add(pnlFill);
+
+            Label lblPct = new Label();
+            lblPct.Text = "0% · Enviando...";
+            lblPct.Font = new Font("Segoe UI", 7.5F);
+            lblPct.ForeColor = colorSubtexto;
+            lblPct.BackColor = colorFondo;
+            lblPct.Size = new Size(216, 14);
+            lblPct.Location = new Point(8, 60);
+
+            Panel burbujaPanel = new Panel();
+            burbujaPanel.Name = "burb_send_" + scrollChat.Controls.Count;
+            burbujaPanel.BackColor = colorFondo;
+            burbujaPanel.Size = new Size(230, 78);
+            burbujaPanel.Controls.Add(lblIcono);
+            burbujaPanel.Controls.Add(lblNombre);
+            burbujaPanel.Controls.Add(btnCancelar);
+            burbujaPanel.Controls.Add(pnlTrack);
+            burbujaPanel.Controls.Add(lblPct);
+
+            Panel cola = new Panel();
+            cola.Size = new Size(10, 12);
+            cola.BackColor = Color.Transparent;
+            cola.Tag = true;
+            cola.Name = "cola_" + scrollChat.Controls.Count;
+            cola.Paint += (s, e) => DibujarCola(e.Graphics, cola.ClientRectangle, true);
+
+            Panel contenedor = new Panel();
+            contenedor.BackColor = Color.Transparent;
+            contenedor.Tag = true;
+            contenedor.Name = "cont_" + scrollChat.Controls.Count;
+            contenedor.Controls.Add(burbujaPanel);
+            contenedor.Controls.Add(cola);
+
+            scrollChat.Controls.Add(contenedor);
+            ReposicionarMensajes();
+            IrAlUltimoMensaje();
+
+            _burbujasSendChat[nombre] = (pnlFill, lblPct, contenedor);
+        }
+
+        private void AgregarBurbujaProgresoRecepcion(int indice, string nombre, long tamano)
+        {
+            bool d = _modoOscuro;
+            Color colorFondo = d ? OscuroBurbAjeno : ClaroBurbAjeno;
+            Color colorTexto = d ? OscuroBurbTexto : ClaroBurbTexto;
+            Color colorTrack = d ? Color.FromArgb(50, 65, 74) : Color.FromArgb(210, 210, 210);
+            Color colorSubtexto = d ? Color.FromArgb(120, 150, 160) : Color.FromArgb(120, 120, 120);
+
+            string ext = Path.GetExtension(nombre).ToLowerInvariant();
+            string icono = ext is ".mp4" or ".avi" or ".mov" or ".mkv" ? "🎬"
+                         : ext == ".pdf" ? "📄"
+                         : ext is ".docx" or ".doc" ? "📝" : "📎";
+
+            Label lblIcono = new Label();
+            lblIcono.Text = icono;
+            lblIcono.Font = new Font("Segoe UI", 16F);
+            lblIcono.Size = new Size(36, 36);
+            lblIcono.Location = new Point(8, 10);
+            lblIcono.TextAlign = ContentAlignment.MiddleCenter;
+            lblIcono.BackColor = colorFondo;
+            lblIcono.ForeColor = colorTexto;
+
+            Label lblNombre = new Label();
+            lblNombre.Text = nombre;
+            lblNombre.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblNombre.ForeColor = colorTexto;
+            lblNombre.BackColor = colorFondo;
+            lblNombre.Size = new Size(180, 34);
+            lblNombre.Location = new Point(50, 4);
+            lblNombre.AutoEllipsis = true;
+
+            Panel pnlTrack = new Panel();
+            pnlTrack.Name = "track_r_" + indice;
+            pnlTrack.Size = new Size(216, 7);
+            pnlTrack.Location = new Point(8, 50);
+            pnlTrack.BackColor = colorTrack;
+
+            Panel pnlFill = new Panel();
+            pnlFill.Size = new Size(0, 7);
+            pnlFill.Location = new Point(0, 0);
+            pnlFill.BackColor = Color.FromArgb(0, 150, 136);
+            pnlTrack.Controls.Add(pnlFill);
+
+            Label lblPct = new Label();
+            lblPct.Text = "0% · Recibiendo...";
+            lblPct.Font = new Font("Segoe UI", 7.5F);
+            lblPct.ForeColor = colorSubtexto;
+            lblPct.BackColor = colorFondo;
+            lblPct.Size = new Size(216, 14);
+            lblPct.Location = new Point(8, 60);
+
+            Panel burbujaPanel = new Panel();
+            burbujaPanel.Name = "burb_recv_" + scrollChat.Controls.Count;
+            burbujaPanel.BackColor = colorFondo;
+            burbujaPanel.Size = new Size(230, 78);
+            burbujaPanel.Controls.Add(lblIcono);
+            burbujaPanel.Controls.Add(lblNombre);
+            burbujaPanel.Controls.Add(pnlTrack);
+            burbujaPanel.Controls.Add(lblPct);
+
+            Panel cola = new Panel();
+            cola.Size = new Size(10, 12);
+            cola.BackColor = Color.Transparent;
+            cola.Tag = false;
+            cola.Name = "cola_" + scrollChat.Controls.Count;
+            cola.Paint += (s, e) => DibujarCola(e.Graphics, cola.ClientRectangle, false);
+
+            Panel contenedor = new Panel();
+            contenedor.BackColor = Color.Transparent;
+            contenedor.Tag = false;
+            contenedor.Name = "cont_" + scrollChat.Controls.Count;
+            contenedor.Controls.Add(burbujaPanel);
+            contenedor.Controls.Add(cola);
+
+            scrollChat.Controls.Add(contenedor);
+            ReposicionarMensajes();
+            IrAlUltimoMensaje();
+
+            _burbujasRecvChat[indice] = (pnlFill, lblPct, contenedor);
+        }
+
+        private void CancelarEnvioDesdeChat(int indice, string nombre)
+        {
+            Enlace.CancelarEnvio(indice);
+
+            if (_burbujasSendChat.TryGetValue(nombre, out var burbuja))
+            {
+                scrollChat.Controls.Remove(burbuja.contenedor);
+                _burbujasSendChat.Remove(nombre);
+                ReposicionarMensajes();
+            }
+
+            foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+            {
+                if (item.Text == nombre)
+                {
+                    item.SubItems[2].Text = "Cancelado";
+                    item.BackColor = _modoOscuro
+                        ? Color.FromArgb(80, 40, 40)
+                        : Color.FromArgb(255, 200, 200);
+                    break;
+                }
+            }
+            ActualizarIndicadorArchivos();
         }
 
         private void AgregarBurbujaArchivo(string usuario, string rutaArchivo, bool esPropio)

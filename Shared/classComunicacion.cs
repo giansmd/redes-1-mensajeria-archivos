@@ -11,6 +11,7 @@ namespace winProyComunicacion
         public delegate void miManejador(string m);
         public event miManejador LlegoMensaje;
 
+        public event Action<int, string> EnvioIniciado;
         public event Action<string, long, long> ProgresoEnvio;
         public event Action<string, string> ArchivoEnvioCompletado;
         public event Action<string, string> ArchivoRecibidoCompletado;
@@ -18,6 +19,7 @@ namespace winProyComunicacion
         public event Action<int, string, long> MetadatosRecibidosConIndice;
         public event Action<long, long> ProgresoRecepcion;
         public event Action<int, string, long, long> ProgresoRecepcionConIndice;
+        public event Action<int> RecepcionCancelada;
 
         public string NombreUsuario { get; set; } = "";
         public string DirectorioDescarga { get; set; } = "C:\\REDES1\\";
@@ -99,6 +101,31 @@ namespace winProyComunicacion
             return activos;
         }
 
+        public void CancelarEnvio(int indice)
+        {
+            if (indice >= 0 && indice < _envios.Length && _envios[indice] != null && !_envios[indice].Completado)
+            {
+                _envios[indice].Cancelar();
+                _envios[indice] = null;
+                new Thread(() => EnviarTramaCancelacion(indice)) { IsBackground = true }.Start();
+            }
+        }
+
+        private void EnviarTramaCancelacion(int indice)
+        {
+            try
+            {
+                byte[] frame = new byte[1024];
+                frame[0] = (byte)'C';
+                frame[1] = (byte)('0' + indice);
+                for (int i = 2; i < 1024; i++) frame[i] = 64;
+                _semaforoPuerto.Wait();
+                try { sPuerto.Write(frame, 0, 1024); }
+                finally { _semaforoPuerto.Release(); }
+            }
+            catch { }
+        }
+
         public void EnviarArchivos(string[] rutasArchivos)
         {
             if (rutasArchivos == null || rutasArchivos.Length == 0)
@@ -130,6 +157,7 @@ namespace winProyComunicacion
                 }
 
                 envio.Iniciar(NombreUsuario, sPuerto, _semaforoPuerto, () => _mensajePendiente);
+                EnvioIniciado?.Invoke(idx, envio.Nombre);
 
                 Thread hilo = new Thread(() =>
                 {
@@ -171,6 +199,9 @@ namespace winProyComunicacion
                         case "F":
                             ProcesandoMetadatosRecepcion(frame);
                             break;
+                        case "C":
+                            ProcesandoCancelacion(frame);
+                            break;
                         case "I":
                             break;
                         default:
@@ -183,6 +214,14 @@ namespace winProyComunicacion
             {
                 System.Diagnostics.Debug.WriteLine("Error en SPuerto_DataReceived: " + ex.Message);
             }
+        }
+
+        private void ProcesandoCancelacion(byte[] frame)
+        {
+            int indice = frame[1] - (byte)'0';
+            if (_recepcionesActivas.TryRemove(indice, out ArchivoRecepcion archivoRec))
+                archivoRec.Cerrar();
+            RecepcionCancelada?.Invoke(indice);
         }
 
         private void ProcesandoMetadatosRecepcion(byte[] frame)

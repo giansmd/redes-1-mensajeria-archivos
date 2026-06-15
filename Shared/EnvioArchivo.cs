@@ -27,6 +27,14 @@ namespace winProyComunicacion
             Indice = indice;
         }
 
+        private volatile bool _cancelado = false;
+        public bool Cancelado => _cancelado;
+
+        public void Cancelar()
+        {
+            _cancelado = true;
+        }
+
         public bool Abrir()
         {
             try
@@ -39,6 +47,7 @@ namespace winProyComunicacion
                 BytesEnviados = 0;
                 Completado = false;
                 Error = false;
+                _cancelado = false;
                 return true;
             }
             catch
@@ -86,6 +95,7 @@ namespace winProyComunicacion
         public bool EnviarBloque(SerialPort puerto, SemaphoreSlim semaforo, Func<bool> hayMensajePendiente)
         {
             if (Completado || Error) return false;
+            if (_cancelado) { Error = true; Cerrar(); return false; }
 
             int bytesPorEnviar = (int)Math.Min(Tamano - _avance, 1019);
             if (bytesPorEnviar <= 0)
