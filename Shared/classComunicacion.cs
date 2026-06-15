@@ -12,7 +12,8 @@ namespace winProyComunicacion
         public event miManejador LlegoMensaje;
 
         public event Action<string, long, long> ProgresoEnvio;
-        public event Action<string> ArchivoEnvioCompletado;
+        public event Action<string, string> ArchivoEnvioCompletado;
+        public event Action<string, string> ArchivoRecibidoCompletado;
         public event Action<string, long> MetadatosRecibidos;
         public event Action<int, string, long> MetadatosRecibidosConIndice;
         public event Action<long, long> ProgresoRecepcion;
@@ -95,7 +96,7 @@ namespace winProyComunicacion
                 envio.EnvioCompletado += (a) =>
                 {
                     _envios[idx] = null;
-                    ArchivoEnvioCompletado?.Invoke(a.Nombre);
+                    ArchivoEnvioCompletado?.Invoke(a.Nombre, a.Ruta);
                 };
 
                 if (!envio.Abrir())
@@ -266,8 +267,10 @@ namespace winProyComunicacion
                 ProgresoRecepcionConIndice?.Invoke(indice, archivoRec.NombreReal, archivoRec.BytesRecibidos, archivoRec.TamanoTotal);
                 if (archivoRec.Completado)
                 {
+                    string rutaCompleta = Path.Combine(DirectorioDescarga, archivoRec.NombreReal);
                     archivoRec.Cerrar();
                     _recepcionesActivas.TryRemove(indice, out _);
+                    ArchivoRecibidoCompletado?.Invoke(archivoRec.UsuarioRemitente, rutaCompleta);
                 }
             }
             else
@@ -276,8 +279,10 @@ namespace winProyComunicacion
                 archivoRec.EscribirDatos(frame, 5, bytesRestantes);
                 ProgresoRecepcion?.Invoke(archivoRec.BytesRecibidos, archivoRec.TamanoTotal);
                 ProgresoRecepcionConIndice?.Invoke(indice, archivoRec.NombreReal, archivoRec.BytesRecibidos, archivoRec.TamanoTotal);
+                string rutaCompleta = Path.Combine(DirectorioDescarga, archivoRec.NombreReal);
                 archivoRec.Cerrar();
                 _recepcionesActivas.TryRemove(indice, out _);
+                ArchivoRecibidoCompletado?.Invoke(archivoRec.UsuarioRemitente, rutaCompleta);
             }
         }
     }

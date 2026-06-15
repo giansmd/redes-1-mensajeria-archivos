@@ -1,5 +1,6 @@
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace winProyComunicacion
 {
@@ -175,18 +176,37 @@ namespace winProyComunicacion
             {
                 if (c is Panel contenedor && contenedor.Tag is bool esPropio)
                 {
+                    Color colorFondo = esPropio
+                        ? (d ? OscuroBurbPropio : ClaroBurbPropio)
+                        : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
+                    Color colorTexto = d ? OscuroBurbTexto : ClaroBurbTexto;
+
                     foreach (Control hijo in contenedor.Controls)
                     {
                         if (hijo is Label lbl)
                         {
-                            lbl.BackColor = esPropio
-                                ? (d ? OscuroBurbPropio : ClaroBurbPropio)
-                                : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
-                            lbl.ForeColor = d ? OscuroBurbTexto : ClaroBurbTexto;
+                            lbl.BackColor = colorFondo;
+                            lbl.ForeColor = colorTexto;
                         }
                         else if (hijo is Panel cola && cola.Name.StartsWith("cola_"))
                         {
                             cola.Invalidate();
+                        }
+                        else if (hijo is Panel burb && burb.Name.StartsWith("burb_"))
+                        {
+                            burb.BackColor = colorFondo;
+                            foreach (Control nieto in burb.Controls)
+                            {
+                                if (nieto is Label nieto_lbl)
+                                {
+                                    nieto_lbl.BackColor = colorFondo;
+                                    nieto_lbl.ForeColor = colorTexto;
+                                }
+                                else if (nieto is PictureBox pb)
+                                {
+                                    pb.BackColor = colorFondo;
+                                }
+                            }
                         }
                     }
                 }
@@ -231,6 +251,7 @@ namespace winProyComunicacion
             Enlace.LlegoMensaje += Enlace_llegoMensaje;
             Enlace.ProgresoEnvio += Enlace_ProgresoEnvio;
             Enlace.ArchivoEnvioCompletado += Enlace_ArchivoEnvioCompletado;
+            Enlace.ArchivoRecibidoCompletado += Enlace_ArchivoRecibidoCompletado;
             Enlace.MetadatosRecibidos += Enlace_MetadatosRecibidos;
             Enlace.ProgresoRecepcion += Enlace_ProgresoRecepcion;
             Enlace.MetadatosRecibidosConIndice += Enlace_MetadatosRecibidosConIndice;
@@ -379,39 +400,44 @@ namespace winProyComunicacion
             {
                 if (c is Panel contenedor && contenedor.Tag is bool esPropio)
                 {
-                    Label burbuja = null;
+                    Label burbujaLabel = null;
+                    Panel burbujaPanel = null;
                     Panel cola = null;
                     foreach (Control hijo in contenedor.Controls)
                     {
-                        if (hijo is Label lbl) burbuja = lbl;
-                        else if (hijo is Panel pnl && pnl.Name.StartsWith("cola_")) cola = pnl;
+                        if (hijo is Label lbl) burbujaLabel = lbl;
+                        else if (hijo is Panel pnl && pnl.Name.StartsWith("burb_")) burbujaPanel = pnl;
+                        else if (hijo is Panel pnl2 && pnl2.Name.StartsWith("cola_")) cola = pnl2;
                     }
 
-                    if (burbuja != null)
+                    Control burbuja = (Control)burbujaLabel ?? burbujaPanel;
+                    if (burbuja == null) continue;
+
+                    contenedor.AutoSize = false;
+                    int colaAncho = 10;
+
+                    if (burbujaLabel != null)
+                        burbujaLabel.MaximumSize = new Size(anchoBurbuja, 0);
+
+                    int burbujaW = burbujaLabel != null ? burbujaLabel.PreferredSize.Width : burbuja.Width;
+                    int burbujaH = burbujaLabel != null ? burbujaLabel.PreferredSize.Height : burbuja.Height;
+
+                    if (cola != null)
                     {
-                        burbuja.MaximumSize = new Size(anchoBurbuja, 0);
-                        contenedor.AutoSize = false;
-
-                        int colaAncho = 10;
-                        if (cola != null)
+                        cola.Size = new Size(colaAncho, 12);
+                        if (esPropio)
                         {
-                            cola.Size = new Size(colaAncho, 12);
-                            if (esPropio)
-                            {
-                                burbuja.Location = new Point(0, 0);
-                                cola.Location = new Point(burbuja.PreferredSize.Width, 0);
-                            }
-                            else
-                            {
-                                cola.Location = new Point(0, 0);
-                                burbuja.Location = new Point(colaAncho, 0);
-                            }
+                            burbuja.Location = new Point(0, 0);
+                            cola.Location = new Point(burbujaW, 0);
                         }
-
-                        contenedor.Size = new Size(
-                            burbuja.PreferredSize.Width + colaAncho,
-                            burbuja.PreferredSize.Height);
+                        else
+                        {
+                            cola.Location = new Point(0, 0);
+                            burbuja.Location = new Point(colaAncho, 0);
+                        }
                     }
+
+                    contenedor.Size = new Size(burbujaW + colaAncho, burbujaH);
                 }
             }
 
@@ -620,7 +646,7 @@ namespace winProyComunicacion
             }
         }
 
-        private void Enlace_ArchivoEnvioCompletado(string nombreArchivo)
+        private void Enlace_ArchivoEnvioCompletado(string nombreArchivo, string rutaArchivo)
         {
             BeginInvoke(() =>
             {
@@ -635,7 +661,13 @@ namespace winProyComunicacion
                         break;
                     }
                 }
+                AgregarBurbujaArchivo(txtUsuario.Text.Trim(), rutaArchivo, true);
             });
+        }
+
+        private void Enlace_ArchivoRecibidoCompletado(string usuario, string rutaArchivo)
+        {
+            BeginInvoke(() => AgregarBurbujaArchivo(usuario, rutaArchivo, false));
         }
 
         private void Enlace_MetadatosRecibidos(string nombreArchivo, long tamano)
@@ -711,6 +743,124 @@ namespace winProyComunicacion
                 if (recibido >= total && total > 0)
                     lblEstadoRecepcion.Text = "Recepción: completado ✓";
             });
+        }
+
+        private void AgregarBurbujaArchivo(string usuario, string rutaArchivo, bool esPropio)
+        {
+            bool d = _modoOscuro;
+            string nombreArchivo = Path.GetFileName(rutaArchivo);
+            string ext = Path.GetExtension(rutaArchivo).ToLowerInvariant();
+
+            Color colorFondo = esPropio
+                ? (d ? OscuroBurbPropio : ClaroBurbPropio)
+                : (d ? OscuroBurbAjeno : ClaroBurbAjeno);
+            Color colorTexto = d ? OscuroBurbTexto : ClaroBurbTexto;
+
+            bool esImagen = ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp";
+            bool esVideo  = ext is ".mp4" or ".avi" or ".mov" or ".mkv";
+            bool esPdf    = ext == ".pdf";
+            bool esDocx   = ext is ".docx" or ".doc";
+
+            Panel burbujaPanel = new Panel();
+            burbujaPanel.Name = "burb_" + scrollChat.Controls.Count;
+            burbujaPanel.BackColor = colorFondo;
+            burbujaPanel.Cursor = Cursors.Hand;
+
+            if (esImagen && File.Exists(rutaArchivo))
+            {
+                PictureBox pb = new PictureBox();
+                pb.Size = new Size(200, 140);
+                pb.SizeMode = PictureBoxSizeMode.Zoom;
+                pb.BackColor = colorFondo;
+                pb.Location = new Point(8, 8);
+                pb.Cursor = Cursors.Hand;
+                try { pb.Image = Image.FromFile(rutaArchivo); }
+                catch { }
+
+                Label lblNombreImg = new Label();
+                lblNombreImg.Text = nombreArchivo;
+                lblNombreImg.Font = new Font("Segoe UI", 8F);
+                lblNombreImg.ForeColor = colorTexto;
+                lblNombreImg.BackColor = colorFondo;
+                lblNombreImg.Size = new Size(200, 18);
+                lblNombreImg.Location = new Point(8, pb.Bottom + 4);
+                lblNombreImg.AutoEllipsis = true;
+
+                burbujaPanel.Size = new Size(216, lblNombreImg.Bottom + 8);
+                burbujaPanel.Controls.Add(pb);
+                burbujaPanel.Controls.Add(lblNombreImg);
+            }
+            else
+            {
+                string icono = esVideo ? "🎬" : esPdf ? "📄" : esDocx ? "📝" : "📎";
+
+                Label lblIcono = new Label();
+                lblIcono.Text = icono;
+                lblIcono.Font = new Font("Segoe UI", 20F);
+                lblIcono.Size = new Size(44, 44);
+                lblIcono.Location = new Point(8, 10);
+                lblIcono.TextAlign = ContentAlignment.MiddleCenter;
+                lblIcono.BackColor = colorFondo;
+                lblIcono.ForeColor = colorTexto;
+
+                Label lblNombre = new Label();
+                lblNombre.Text = nombreArchivo;
+                lblNombre.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                lblNombre.ForeColor = colorTexto;
+                lblNombre.BackColor = colorFondo;
+                lblNombre.Size = new Size(160, 38);
+                lblNombre.Location = new Point(lblIcono.Right + 6, 8);
+                lblNombre.AutoEllipsis = true;
+
+                Label lblAbrir = new Label();
+                lblAbrir.Text = "Click para abrir";
+                lblAbrir.Font = new Font("Segoe UI", 7.5F, FontStyle.Italic);
+                lblAbrir.ForeColor = Color.FromArgb(160, colorTexto);
+                lblAbrir.BackColor = colorFondo;
+                lblAbrir.AutoSize = true;
+                lblAbrir.Location = new Point(lblIcono.Right + 6, lblNombre.Bottom + 2);
+
+                burbujaPanel.Size = new Size(230, 70);
+                burbujaPanel.Controls.Add(lblIcono);
+                burbujaPanel.Controls.Add(lblNombre);
+                burbujaPanel.Controls.Add(lblAbrir);
+            }
+
+            EventHandler abrirArchivo = (s, ev) =>
+            {
+                if (File.Exists(rutaArchivo))
+                {
+                    try { Process.Start(new ProcessStartInfo(rutaArchivo) { UseShellExecute = true }); }
+                    catch (Exception ex) { MessageBox.Show("No se pudo abrir el archivo:\n" + ex.Message); }
+                }
+                else
+                {
+                    MessageBox.Show("El archivo ya no está disponible:\n" + rutaArchivo);
+                }
+            };
+
+            burbujaPanel.Click += abrirArchivo;
+            foreach (Control hijo in burbujaPanel.Controls)
+                hijo.Click += abrirArchivo;
+
+            Panel contenedor = new Panel();
+            contenedor.BackColor = Color.Transparent;
+            contenedor.Tag = esPropio;
+            contenedor.Name = "cont_" + scrollChat.Controls.Count;
+
+            Panel cola = new Panel();
+            cola.Size = new Size(10, 12);
+            cola.BackColor = Color.Transparent;
+            cola.Tag = esPropio;
+            cola.Name = "cola_" + scrollChat.Controls.Count;
+            cola.Paint += (s, e) => DibujarCola(e.Graphics, cola.ClientRectangle, esPropio);
+
+            contenedor.Controls.Add(burbujaPanel);
+            contenedor.Controls.Add(cola);
+
+            scrollChat.Controls.Add(contenedor);
+            ReposicionarMensajes();
+            IrAlUltimoMensaje();
         }
     }
 }
