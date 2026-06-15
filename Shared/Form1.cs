@@ -1,4 +1,5 @@
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace winProyComunicacion
@@ -556,25 +557,68 @@ namespace winProyComunicacion
 
             if (dialogo.ShowDialog() == DialogResult.OK && dialogo.FileNames.Length > 0)
             {
-                if (dialogo.FileNames.Length > 5)
-                    MessageBox.Show("Máximo 5 archivos simultáneos. Se enviarán los primeros 5.");
+                int enviosActivos = Enlace.ObtenerEnviosActivos();
+                int slotsLibres = 5 - enviosActivos;
 
-                lvArchivosSeleccionados.Items.Clear();
+                if (slotsLibres <= 0)
+                {
+                    MessageBox.Show($"Ya hay {enviosActivos} archivos en envío. Espere a que terminen para seleccionar más.");
+                    return;
+                }
 
-                int limite = Math.Min(dialogo.FileNames.Length, 5);
+                if (dialogo.FileNames.Length > slotsLibres)
+                {
+                    MessageBox.Show($"Solo puede seleccionar {slotsLibres} archivo(s) nuevo(s). Se enviarán los primeros {slotsLibres}.");
+                }
+
+                // No limpiar la lista para mantener archivos en tránsito
+                int limite = Math.Min(dialogo.FileNames.Length, slotsLibres);
                 for (int i = 0; i < limite; i++)
                 {
                     string ruta = dialogo.FileNames[i];
                     string nombre = Path.GetFileName(ruta);
                     long tamano = new FileInfo(ruta).Length;
 
+                    // Verificar que no esté duplicado
+                    bool existe = false;
+                    foreach (ListViewItem existing in lvArchivosSeleccionados.Items)
+                    {
+                        if (existing.Tag as string == ruta)
+                        {
+                            existe = true;
+                            break;
+                        }
+                    }
+
+                    if (existe) continue;
+
                     ListViewItem item = new ListViewItem(nombre);
                     item.SubItems.Add(tamano.ToString());
-                    item.SubItems.Add("0%");
+                    item.SubItems.Add("Listo");
                     item.Tag = ruta;
+                    item.BackColor = _modoOscuro
+                        ? Color.FromArgb(42, 57, 66)
+                        : Color.White;
                     lvArchivosSeleccionados.Items.Add(item);
                 }
+
+                ActualizarIndicadorArchivos();
             }
+        }
+
+        private void ActualizarIndicadorArchivos()
+        {
+            int activos = Enlace.ObtenerEnviosActivos();
+            int total = lvArchivosSeleccionados.Items.Count;
+            int listos = 0;
+
+            foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+            {
+                if (item.SubItems[2].Text == "Listo")
+                    listos++;
+            }
+
+            gbArchivos.Text = $"  📁  Transferencia de Archivos ({activos}/5 enviando - {listos} listos)";
         }
 
         private void btnEnviarArchivos_Click(object sender, EventArgs e)
@@ -591,15 +635,46 @@ namespace winProyComunicacion
                 return;
             }
 
-            string[] rutas = new string[lvArchivosSeleccionados.Items.Count];
-            for (int i = 0; i < lvArchivosSeleccionados.Items.Count; i++)
-                rutas[i] = lvArchivosSeleccionados.Items[i].Tag as string;
-
+            // Filtrar solo archivos en estado "Listo" para enviar
+            var rutasListas = new List<string>();
             foreach (ListViewItem item in lvArchivosSeleccionados.Items)
-                item.SubItems[2].Text = "pendiente";
+            {
+                if (item.SubItems[2].Text == "Listo")
+                {
+                    rutasListas.Add(item.Tag as string);
+                }
+            }
+
+            if (rutasListas.Count == 0)
+            {
+                MessageBox.Show("No hay archivos listos para enviar. Todos ya están en envío o completados.");
+                return;
+            }
+
+            int slotsLibres = 5 - Enlace.ObtenerEnviosActivos();
+            if (rutasListas.Count > slotsLibres)
+            {
+                MessageBox.Show($"Solo hay {slotsLibres} slot(s) libre(s). Se enviarán los primeros {slotsLibres} archivos.");
+                rutasListas = rutasListas.Take(slotsLibres).ToList();
+            }
+
+            // Marcar como pendientes solo los que se van a enviar
+            int enviados = 0;
+            foreach (ListViewItem item in lvArchivosSeleccionados.Items)
+            {
+                if (item.SubItems[2].Text == "Listo" && enviados < slotsLibres)
+                {
+                    item.SubItems[2].Text = "pendiente";
+                    item.BackColor = _modoOscuro
+                        ? Color.FromArgb(0, 92, 75)
+                        : Color.FromArgb(220, 248, 198);
+                    enviados++;
+                }
+            }
 
             Enlace.NombreUsuario = txtUsuario.Text.Trim();
-            Enlace.EnviarArchivos(rutas);
+            Enlace.EnviarArchivos(rutasListas.ToArray());
+            ActualizarIndicadorArchivos();
         }
 
         private void Enlace_ProgresoEnvio(string nombreArchivo, long enviado, long total)
@@ -635,6 +710,7 @@ namespace winProyComunicacion
                         break;
                     }
                 }
+                ActualizarIndicadorArchivos();
             });
         }
 

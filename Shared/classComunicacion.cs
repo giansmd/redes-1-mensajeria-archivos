@@ -76,6 +76,28 @@ namespace winProyComunicacion
                 Directory.CreateDirectory(directorio);
         }
 
+        public List<int> ObtenerIndicesLibres()
+        {
+            var libres = new List<int>();
+            for (int i = 0; i < _envios.Length; i++)
+            {
+                if (_envios[i] == null || _envios[i].Completado || _envios[i].Error)
+                    libres.Add(i);
+            }
+            return libres;
+        }
+
+        public int ObtenerEnviosActivos()
+        {
+            int activos = 0;
+            for (int i = 0; i < _envios.Length; i++)
+            {
+                if (_envios[i] != null && !_envios[i].Completado && !_envios[i].Error)
+                    activos++;
+            }
+            return activos;
+        }
+
         public void EnviarArchivos(string[] rutasArchivos)
         {
             if (rutasArchivos == null || rutasArchivos.Length == 0)
@@ -83,13 +105,15 @@ namespace winProyComunicacion
 
             AsegurarDirectorioRedes1();
 
-            int limite = Math.Min(rutasArchivos.Length, 5);
-            for (int i = 0; i < limite; i++)
-            {
-                var envio = new EnvioArchivo(rutasArchivos[i], i);
-                _envios[i] = envio;
+            var indicesLibres = ObtenerIndicesLibres();
+            int cantidad = Math.Min(rutasArchivos.Length, indicesLibres.Count);
 
-                int idx = i;
+            for (int i = 0; i < cantidad; i++)
+            {
+                int idx = indicesLibres[i];
+                var envio = new EnvioArchivo(rutasArchivos[i], idx);
+                _envios[idx] = envio;
+
                 envio.ProgresoChanged += (a, enviado, total) =>
                     ProgresoEnvio?.Invoke(a.Nombre, enviado, total);
                 envio.EnvioCompletado += (a) =>
@@ -99,7 +123,10 @@ namespace winProyComunicacion
                 };
 
                 if (!envio.Abrir())
+                {
+                    _envios[idx] = null;
                     continue;
+                }
 
                 envio.Iniciar(NombreUsuario, sPuerto, _semaforoPuerto, () => _mensajePendiente);
 
