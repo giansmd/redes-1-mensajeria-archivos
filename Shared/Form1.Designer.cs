@@ -34,11 +34,6 @@
             btnEnviarArchivos = new Button();
             lblEstadoRecepcion = new Label();
             pbRecepcionArchivo = new ProgressBar();
-            lblArchivoRecepcion = new Label();
-            txtArchivoRecepcion = new TextBox();
-            txtTamanoArchivo = new TextBox();
-            labelBytes = new Label();
-            btnCrearArchivo = new Button();
             panelHeader = new Panel();
             panelChat = new Panel();
             panelInput = new Panel();
@@ -228,18 +223,13 @@
             gbArchivos.Controls.Add(btnEnviarArchivos);
             gbArchivos.Controls.Add(lvArchivosSeleccionados);
             gbArchivos.Controls.Add(btnSeleccionarArchivos);
-            gbArchivos.Controls.Add(btnCrearArchivo);
-            gbArchivos.Controls.Add(labelBytes);
-            gbArchivos.Controls.Add(txtTamanoArchivo);
-            gbArchivos.Controls.Add(txtArchivoRecepcion);
-            gbArchivos.Controls.Add(lblArchivoRecepcion);
             gbArchivos.Dock = DockStyle.Bottom;
             gbArchivos.FlatStyle = FlatStyle.Flat;
             gbArchivos.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
             gbArchivos.ForeColor = ClaroGbFg;
             gbArchivos.Name = "gbArchivos";
             gbArchivos.Padding = new Padding(12, 8, 12, 10);
-            gbArchivos.Size = new Size(620, 180);
+            gbArchivos.Size = new Size(620, 140);
             gbArchivos.TabIndex = 10;
             gbArchivos.TabStop = false;
             gbArchivos.Text = "  📁  Transferencia de Archivos";
@@ -344,62 +334,6 @@
             lblPorcentaje.Text = "0%";
             lblPorcentaje.TabIndex = 21;
 
-            // lblArchivoRecepcion — fila manual (Y=138)
-            lblArchivoRecepcion.AutoSize = true;
-            lblArchivoRecepcion.Font = new Font("Segoe UI", 7.5F);
-            lblArchivoRecepcion.ForeColor = ClaroLabelFg;
-            lblArchivoRecepcion.Location = new Point(12, 141);
-            lblArchivoRecepcion.Name = "lblArchivoRecepcion";
-            lblArchivoRecepcion.Text = "Recepción manual:";
-
-            // txtArchivoRecepcion
-            txtArchivoRecepcion.BackColor = ClaroTxtBg;
-            txtArchivoRecepcion.BorderStyle = BorderStyle.FixedSingle;
-            txtArchivoRecepcion.Font = new Font("Consolas", 8.5F);
-            txtArchivoRecepcion.ForeColor = ClaroTxtFg;
-            txtArchivoRecepcion.Location = new Point(114, 138);
-            txtArchivoRecepcion.Name = "txtArchivoRecepcion";
-            txtArchivoRecepcion.PlaceholderText = "nombre archivo";
-            txtArchivoRecepcion.Size = new Size(158, 22);
-            txtArchivoRecepcion.TabIndex = 9;
-
-            // txtTamanoArchivo
-            txtTamanoArchivo.BackColor = ClaroTxtBg;
-            txtTamanoArchivo.BorderStyle = BorderStyle.FixedSingle;
-            txtTamanoArchivo.Font = new Font("Consolas", 8.5F);
-            txtTamanoArchivo.ForeColor = ClaroTxtFg;
-            txtTamanoArchivo.Location = new Point(280, 138);
-            txtTamanoArchivo.Name = "txtTamanoArchivo";
-            txtTamanoArchivo.PlaceholderText = "tamaño";
-            txtTamanoArchivo.Size = new Size(88, 22);
-            txtTamanoArchivo.TabIndex = 10;
-
-            // labelBytes
-            labelBytes.AutoSize = true;
-            labelBytes.Font = new Font("Segoe UI", 7.5F);
-            labelBytes.ForeColor = ClaroLabelFg;
-            labelBytes.Location = new Point(372, 141);
-            labelBytes.Name = "labelBytes";
-            labelBytes.Text = "bytes";
-
-            // ── btnCrearArchivo — alineado con la fila manual ──
-            btnCrearArchivo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnCrearArchivo.BackColor = Color.FromArgb(239, 108, 0);
-            btnCrearArchivo.FlatStyle = FlatStyle.Flat;
-            btnCrearArchivo.FlatAppearance.BorderSize = 0;
-            btnCrearArchivo.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 143, 0);
-            btnCrearArchivo.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
-            btnCrearArchivo.ForeColor = Color.White;
-            btnCrearArchivo.Location = new Point(490, 134);
-            btnCrearArchivo.Name = "btnCrearArchivo";
-            btnCrearArchivo.Size = new Size(118, 30);
-            btnCrearArchivo.TabIndex = 12;
-            btnCrearArchivo.Text = "    Crear arch.";
-            btnCrearArchivo.UseVisualStyleBackColor = false;
-            btnCrearArchivo.Cursor = Cursors.Hand;
-            btnCrearArchivo.Click += btnCrearArchivo_Click;
-            btnCrearArchivo.Paint += btnCrearArchivo_Paint;
-
             // ══════════════════════════════════════════════════
             //  FORM
             // ══════════════════════════════════════════════════
@@ -460,10 +394,5 @@
         private Button btnEnviarArchivos;
         private Label lblEstadoRecepcion;
         private ProgressBar pbRecepcionArchivo;
-        private Label lblArchivoRecepcion;
-        private TextBox txtArchivoRecepcion;
-        private TextBox txtTamanoArchivo;
-        private Label labelBytes;
-        private Button btnCrearArchivo;
     }
 }

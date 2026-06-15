@@ -20,6 +20,9 @@
     </Compile>
     <Compile Include="..\Shared\Form1.Designer.cs" Link="Form1.Designer.cs">
       <SubType>Form</SubType>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Form1.resx</DependentUpon>
     </Compile>
     <Compile Include="..\Shared\classComunicacion.cs" Link="classComunicacion.cs" />
     <Compile Include="..\Shared\EnvioArchivo.cs" Link="EnvioArchivo.cs" />

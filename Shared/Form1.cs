@@ -115,29 +115,6 @@ namespace winProyComunicacion
             }
         }
 
-        private void btnCrearArchivo_Paint(object sender, PaintEventArgs e)
-        {
-            var btn = (Button)sender;
-            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            int x = 8, y = btn.Height / 2 - 6;
-            using (var brush = new SolidBrush(Color.White))
-            {
-                e.Graphics.FillRectangle(brush, x, y + 4, 14, 10);
-                Point[] tab = {
-                    new Point(x,     y + 4),
-                    new Point(x,     y + 2),
-                    new Point(x + 5, y + 2),
-                    new Point(x + 7, y + 4)
-                };
-                e.Graphics.FillPolygon(brush, tab);
-                using (var pen = new Pen(Color.FromArgb(239, 108, 0), 2f))
-                {
-                    e.Graphics.DrawLine(pen, x + 7, y + 7, x + 7, y + 11);
-                    e.Graphics.DrawLine(pen, x + 5, y + 9, x + 9, y + 9);
-                }
-            }
-        }
-
         private void AgregarBotonModo()
         {
             btnModo = new Button();
@@ -185,13 +162,7 @@ namespace winProyComunicacion
             gbArchivos.ForeColor = d ? OscuroGbFg : ClaroGbFg;
             lvArchivosSeleccionados.BackColor = d ? OscuroLvBg : ClaroLvBg;
             lvArchivosSeleccionados.ForeColor = d ? OscuroLvFg : ClaroLvFg;
-            txtArchivoRecepcion.BackColor = d ? OscuroTxtBg : ClaroTxtBg;
-            txtArchivoRecepcion.ForeColor = d ? OscuroTxtFg : ClaroTxtFg;
-            txtTamanoArchivo.BackColor = d ? OscuroTxtBg : ClaroTxtBg;
-            txtTamanoArchivo.ForeColor = d ? OscuroTxtFg : ClaroTxtFg;
             lblEstadoRecepcion.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
-            labelBytes.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
-            lblArchivoRecepcion.ForeColor = d ? OscuroLabelFg : ClaroLabelFg;
             pbRecepcionArchivo.BackColor = d ? OscuroInput : ClaroTxtBg;
 
             ActualizarColorBurbujas();
@@ -227,7 +198,6 @@ namespace winProyComunicacion
             RedondearBoton(btnEnviaMensaje, 20);
             RedondearBoton(btnSeleccionarArchivos, 15);
             RedondearBoton(btnEnviarArchivos, 15);
-            RedondearBoton(btnCrearArchivo, 15);
         }
 
         private void RedondearBoton(Button boton, int radio)
@@ -630,28 +600,6 @@ namespace winProyComunicacion
 
             Enlace.NombreUsuario = txtUsuario.Text.Trim();
             Enlace.EnviarArchivos(rutas);
-        }
-
-        private void btnCrearArchivo_Click(object sender, EventArgs e)
-        {
-            var nombre = txtArchivoRecepcion.Text.Trim();
-            if (string.IsNullOrWhiteSpace(nombre))
-            {
-                MessageBox.Show("Ingrese un nombre de archivo a recibir.");
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(txtTamanoArchivo.Text))
-            {
-                MessageBox.Show("Ingrese el tamaño del archivo en bytes.");
-                return;
-            }
-            if (!long.TryParse(txtTamanoArchivo.Text, out long tamano))
-            {
-                MessageBox.Show("El tamaño debe ser un numero entero (bytes).");
-                return;
-            }
-            Enlace.CrearArchivo(nombre, tamano);
-            lblEstadoRecepcion.Text = "Recepción manual: " + nombre + " (" + tamano + " bytes)";
         }
 
         private void Enlace_ProgresoEnvio(string nombreArchivo, long enviado, long total)
