@@ -260,23 +260,7 @@
             btnSeleccionarArchivos.UseVisualStyleBackColor = false;
             btnSeleccionarArchivos.Cursor = Cursors.Hand;
             btnSeleccionarArchivos.Click += btnSeleccionarArchivos_Click;
-            btnSeleccionarArchivos.Paint += (s, e) =>
-            {
-                var btn = (Button)s!;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                int x = 10, y = btn.Height / 2 - 7;
-                Point[] arrow = {
-                    new Point(x,      y),
-                    new Point(x,      y + 14),
-                    new Point(x + 4,  y + 10),
-                    new Point(x + 7,  y + 15),
-                    new Point(x + 9,  y + 14),
-                    new Point(x + 6,  y + 9),
-                    new Point(x + 11, y + 9)
-                };
-                using var brush = new SolidBrush(Color.White);
-                e.Graphics.FillPolygon(brush, arrow);
-            };
+            btnSeleccionarArchivos.Paint += btnSeleccionarArchivos_Paint;
 
             // ── lvArchivosSeleccionados ────────────────────────
             lvArchivosSeleccionados.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -308,23 +292,6 @@
             btnEnviarArchivos.UseVisualStyleBackColor = false;
             btnEnviarArchivos.Cursor = Cursors.Hand;
             btnEnviarArchivos.Click += btnEnviarArchivos_Click;
-            btnEnviarArchivos.Paint += (s, e) =>
-            {
-                var btn = (Button)s!;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                int x = 10, cy = btn.Height / 2;
-                Point[] up = {
-                    new Point(x + 4, cy - 6),
-                    new Point(x + 8, cy - 1),
-                    new Point(x + 6, cy - 1),
-                    new Point(x + 6, cy + 5),
-                    new Point(x + 2, cy + 5),
-                    new Point(x + 2, cy - 1),
-                    new Point(x,     cy - 1)
-                };
-                using var brush = new SolidBrush(Color.White);
-                e.Graphics.FillPolygon(brush, up);
-            };
 
             // lblEstadoRecepcion
             lblEstadoRecepcion.AutoSize = true;
@@ -431,24 +398,7 @@
             btnCrearArchivo.UseVisualStyleBackColor = false;
             btnCrearArchivo.Cursor = Cursors.Hand;
             btnCrearArchivo.Click += btnCrearArchivo_Click;
-            btnCrearArchivo.Paint += (s, e) =>
-            {
-                var btn = (Button)s!;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                int x = 8, y = btn.Height / 2 - 6;
-                using var brush = new SolidBrush(Color.White);
-                e.Graphics.FillRectangle(brush, x, y + 4, 14, 10);
-                Point[] tab = {
-                    new Point(x,     y + 4),
-                    new Point(x,     y + 2),
-                    new Point(x + 5, y + 2),
-                    new Point(x + 7, y + 4)
-                };
-                e.Graphics.FillPolygon(brush, tab);
-                using var pen = new Pen(Color.FromArgb(239, 108, 0), 2f);
-                e.Graphics.DrawLine(pen, x + 7, y + 7, x + 7, y + 11);
-                e.Graphics.DrawLine(pen, x + 5, y + 9, x + 9, y + 9);
-            };
+            btnCrearArchivo.Paint += btnCrearArchivo_Paint;
 
             // ══════════════════════════════════════════════════
             //  FORM

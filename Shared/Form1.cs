@@ -6,7 +6,7 @@ namespace winProyComunicacion
     public partial class Form1 : Form
     {
         private const string DefaultRemoteUser = "Remoto";
-        private static readonly int[] VelocidadesSoportadas = [900, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800];
+        private static readonly int[] VelocidadesSoportadas = new[] { 900, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800 };
 
         [DllImport("user32.dll")]
         private static extern bool LockWindowUpdate(IntPtr hWnd);
@@ -93,6 +93,49 @@ namespace winProyComunicacion
                 IrAlUltimoMensaje();
             };
             scrollChat.Click += (s, e) => txtMensaje.Focus();
+        }
+
+        private void btnSeleccionarArchivos_Paint(object sender, PaintEventArgs e)
+        {
+            var btn = (Button)sender;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            int x = 10, y = btn.Height / 2 - 7;
+            Point[] arrow = {
+                new Point(x,      y),
+                new Point(x,      y + 14),
+                new Point(x + 4,  y + 10),
+                new Point(x + 7,  y + 15),
+                new Point(x + 9,  y + 14),
+                new Point(x + 6,  y + 9),
+                new Point(x + 11, y + 9)
+            };
+            using (var brush = new SolidBrush(Color.White))
+            {
+                e.Graphics.FillPolygon(brush, arrow);
+            }
+        }
+
+        private void btnCrearArchivo_Paint(object sender, PaintEventArgs e)
+        {
+            var btn = (Button)sender;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            int x = 8, y = btn.Height / 2 - 6;
+            using (var brush = new SolidBrush(Color.White))
+            {
+                e.Graphics.FillRectangle(brush, x, y + 4, 14, 10);
+                Point[] tab = {
+                    new Point(x,     y + 4),
+                    new Point(x,     y + 2),
+                    new Point(x + 5, y + 2),
+                    new Point(x + 7, y + 4)
+                };
+                e.Graphics.FillPolygon(brush, tab);
+                using (var pen = new Pen(Color.FromArgb(239, 108, 0), 2f))
+                {
+                    e.Graphics.DrawLine(pen, x + 7, y + 7, x + 7, y + 11);
+                    e.Graphics.DrawLine(pen, x + 5, y + 9, x + 9, y + 9);
+                }
+            }
         }
 
         private void AgregarBotonModo()
